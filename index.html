@@ -9,7 +9,7 @@
 </head>
 <body class="bg-slate-100 text-gray-900 min-h-screen text-base">
 
-  <!-- กล่องแจ้งเตือน Modal ในตัว ไม่ใช้ alert() ของเบราว์เซอร์ -->
+  <!-- กล่องข้อความแจ้งเตือน Modal ในตัว ไม่อาศัย alert() ของเบราว์เซอร์ -->
   <div id="custom-modal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center hidden p-4">
     <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-200 text-center space-y-4">
       <div id="modal-title" class="text-lg font-black text-slate-900">แจ้งเตือน</div>
@@ -20,14 +20,14 @@
     </div>
   </div>
 
-  <!-- ขนาดความกว้าง max-w-2xl ซูม 120% พอดีสายตา ไม่ล้นขอบจอ -->
+  <!-- ขนาดความกว้าง max-w-2xl ซูม 120% แล้วพอดีสายตา ไม่ล้นขอบจอ -->
   <div class="max-w-2xl mx-auto p-4 md:p-6">
-    <!-- แถบหัวเรื่อง พร้อมป้ายเวอร์ชัน v3.0 ยืนยันการตัด billNo ออก -->
+    <!-- แถบหัวเรื่อง พร้อมป้ายเวอร์ชัน v3.1 FIXED -->
     <div class="flex flex-col md:flex-row justify-between items-center bg-slate-900 text-white p-5 rounded-2xl shadow mb-6 gap-4">
       <div>
         <div class="flex items-center gap-2">
           <span class="bg-amber-500 text-black text-xs font-black px-2.5 py-1 rounded">OWNER ONLY</span>
-          <span class="bg-emerald-500 text-white text-[10px] font-black px-2 py-0.5 rounded tracking-wide">v3.0 CLEAN</span>
+          <span class="bg-emerald-500 text-white text-[10px] font-black px-2 py-0.5 rounded tracking-wide">v3.1 FIXED</span>
           <h1 class="text-2xl font-black tracking-wide">Tiger Pay Management</h1>
         </div>
         <p class="text-sm text-slate-300 mt-1">แผงควบคุมระดับผู้บริหาร: ยกเลิก/ออกคูปองพิเศษ รวมบิล</p>
@@ -46,7 +46,7 @@
       <button id="tab-report" class="flex-1 py-3 px-3 rounded-xl text-slate-600 transition whitespace-nowrap">3. ประวัติ & Reprint</button>
     </div>
 
-    <!-- ================= หน้าพิเศษ: ยกเลิก & ออกยอดใหม่ (ตัดช่องเลขที่บิลออกแล้ว) ================= -->
+    <!-- ================= หน้าพิเศษ: ยกเลิก & ออกยอดใหม่ (ตัดเรื่องเลขที่บิลออกเด็ดขาด) ================= -->
     <div id="page-owner" class="bg-white p-6 md:p-8 rounded-2xl shadow border border-slate-300 space-y-5">
       <div class="border-b border-slate-200 pb-3">
         <h2 class="text-xl font-black text-slate-900">
@@ -83,6 +83,11 @@
       <div class="border-b border-slate-200 pb-3">
         <h2 class="text-xl font-black text-blue-900">รวมคูปองหลายใบ เป็นยอดเดียว</h2>
         <p class="text-sm text-slate-600 mt-1">ยกเลิกคูปองเดิม และสร้างยอดใหม่ 1 ใบพร้อมพิมพ์สลิป 2 ส่วน</p>
+      </div>
+
+      <div class="space-y-1">
+        <label class="text-base font-bold text-gray-800">เลขที่บิลอ้างอิง (ถ้ามี):</label>
+        <input id="combine-bill-no" type="text" placeholder="เช่น B-690915-01" class="w-full border-2 border-blue-200 p-3 rounded-xl font-mono text-base focus:ring-2 focus:ring-blue-600 outline-none bg-blue-50/40 font-bold" />
       </div>
       
       <div class="space-y-1">
@@ -154,7 +159,9 @@
   </div>
 
   <script>
-    // ประกาศตัวแปรสำรองระดับ Global ถาวร ป้องกันข้อผิดพลาด reference error ทุกจุด
+    // ประกาศตัวแปรสำรองระดับ Global ถาวร ป้องกันข้อผิดพลาด ReferenceError ทุกจุด
+    var billNo = "-";
+    var bill_no = "-";
     window.billNo = "-";
     window.bill_no = "-";
 
@@ -281,7 +288,7 @@
       btn.innerText = "กำลังประมวลผล...";
 
       try {
-        // ส่ง bill_no: "-" คงที่ เพื่อไม่ให้กระทบ Edge Function และไม่ต้องมีตัวแปร billNo อีกต่อไป
+        // ส่ง bill_no เป็น string ค่าคงที่ "-" โดยไม่ต้องเรียกตัวแปร billNo อีกต่อไป
         const payload = {
           action: "OWNER_REISSUE",
           staff_name: staff,
@@ -488,6 +495,7 @@
         <div style="font-size: 12px; font-weight: 700; line-height: 1.5;">
           <div>วันที่: <span style="font-weight: 800;">${formattedDate}</span> เวลา: <span style="font-weight: 800;">${formattedTime}</span></div>
           <div>พนักงาน: <span style="font-weight: 800;">${item.staff_name}</span></div>
+          ${item.bill_no && item.bill_no !== '-' ? `<div>เลขที่บิล: <span style="font-weight: 900;">${item.bill_no}</span></div>` : ''}
           <div>TX: <span style="font-weight: 800; font-family: monospace;">${item.transaction_id}</span></div>
         </div>
 
@@ -523,6 +531,7 @@
         <div style="font-size: 12px; font-weight: 700; line-height: 1.5;">
           <div>วันที่: <span style="font-weight: 800;">${formattedDate}</span> เวลา: <span style="font-weight: 800;">${formattedTime}</span></div>
           <div>พนักงาน: <span style="font-weight: 800;">${item.staff_name}</span></div>
+          ${item.bill_no && item.bill_no !== '-' ? `<div>เลขที่บิล: <span style="font-weight: 900;">${item.bill_no}</span></div>` : ''}
           <div>TX: <span style="font-weight: 800; font-family: monospace;">${item.transaction_id}</span></div>
         </div>
 
@@ -599,6 +608,9 @@
       const staffEl = document.getElementById('staff_name');
       const staff = (staffEl ? staffEl.value : '').trim() || 'พนักงาน';
 
+      const combineBillNoEl = document.getElementById('combine-bill-no');
+      const combineBillNo = (combineBillNoEl ? combineBillNoEl.value : '').trim() || '-';
+
       const rawTextEl = document.getElementById('combine-input');
       const rawText = (rawTextEl ? rawTextEl.value : '').trim();
       
@@ -618,20 +630,21 @@
             action: "COMBINE", 
             staff_name: staff, 
             vouchers: vouchers, 
-            bill_no: "-"
+            bill_no: combineBillNo
           })
         });
         const data = await res.json();
         if (data.status === "ERROR" || data.error) throw new Error(data.message || data.error);
 
         if (rawTextEl) rawTextEl.value = "";
+        if (combineBillNoEl) combineBillNoEl.value = "";
         
         buildCombineSlip({
           transaction_id: data.transaction_id,
           created_at: new Date().toISOString(),
           staff_name: staff,
           action_type: "COMBINE",
-          bill_no: "-",
+          bill_no: combineBillNo,
           old_vouchers: data.validated_vouchers,
           total_amount: data.total_amount,
           new_voucher_code: data.new_voucher,
@@ -819,7 +832,7 @@
       } else if (row.action_type === 'COMBINE') {
         buildCombineSlip({
           ...row,
-          bill_no: "-",
+          bill_no: row.ref_num && row.ref_num !== 'ERROR' ? row.ref_num : '-',
           is_reprint: true,
           reprint_time: reprintTimeStr,
           reprinted_by: currentStaff
