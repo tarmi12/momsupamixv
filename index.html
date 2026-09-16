@@ -9,9 +9,9 @@
 </head>
 <body class="bg-slate-100 text-gray-900 min-h-screen text-base">
 
-  <!-- Modal กล่องข้อความแจ้งเตือน (ทดแทน alert ของเบราว์เซอร์เพื่อความสวยงามและไม่ค้าง) -->
+  <!-- Modal แจ้งเตือนข้อความทั่วไป (ไม่บอกใบ้สูตรลับ ปลอดภัย ไม่ใช้ alert ธรรมดา) -->
   <div id="custom-modal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-200 text-center space-y-4 animate-in fade-in zoom-in duration-150">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-200 text-center space-y-4">
       <div id="modal-title" class="text-lg font-black text-slate-900">แจ้งเตือน</div>
       <p id="modal-message" class="text-sm font-semibold text-slate-600 leading-relaxed whitespace-pre-line"></p>
       <button id="modal-close-btn" class="w-full bg-slate-900 hover:bg-black text-white font-bold py-3 rounded-xl transition active:scale-95 shadow">
@@ -20,7 +20,7 @@
     </div>
   </div>
 
-  <!-- ขนาดความกว้าง max-w-2xl พอดีสายตา ซูม 120% แล้วไม่ล้นขอบจอ -->
+  <!-- ขนาดความกว้าง max-w-2xl ซูม 120% พอดีสายตา ไม่ล้นขอบจอ -->
   <div class="max-w-2xl mx-auto p-4 md:p-6">
     <!-- แถบหัวเรื่อง -->
     <div class="flex flex-col md:flex-row justify-between items-center bg-slate-900 text-white p-5 rounded-2xl shadow mb-6 gap-4">
@@ -62,6 +62,7 @@
 
         <div>
           <label class="text-base font-bold text-gray-800">2. ยอดเงิน:</label>
+          <!-- ช่องกรอกยอดเงินปกติ ไม่มีปุ่มปลดล็อกหรือข้อความบอกใบ้ใดๆ พิมพ์ยอดเงิน**1 แล้วกด Enter ได้ทันที -->
           <input id="owner-secret-input" type="text" placeholder="0.00" class="w-full border-2 border-slate-300 p-3 rounded-xl font-mono text-lg md:text-xl focus:ring-2 focus:ring-slate-800 outline-none bg-slate-50 font-black text-slate-900 mt-1" autocomplete="off" />
         </div>
 
@@ -126,7 +127,7 @@
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b pb-3">
         <div>
           <h2 class="text-xl font-black text-gray-900">ประวัติการทำรายการ</h2>
-          <p class="text-xs text-gray-500">แสดง 50 รายการล่าสุด พร้อมประวัติการ Reprint</p>
+          <p class="text-xs text-gray-500">แสดง 50 รายการล่าสุด พร้อมระบุผู้ Reprint และเวลา</p>
         </div>
         <button id="btn-refresh-history" class="text-sm bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-xl border font-bold shadow-sm">🔄 โหลดใหม่</button>
       </div>
@@ -173,7 +174,10 @@
     let supabaseClient = null;
     let cachedRows = [];
 
-    // ฟังก์ชันแสดง Modal แจ้งเตือน
+    // ประกาศตัวแปรสำรองระดับ Global ป้องกันข้อผิดพลาด reference error ทุกกรณี
+    window.billNo = '-';
+    window.bill_no = '-';
+
     function showModal(message, title = "แจ้งเตือน") {
       const modal = document.getElementById('custom-modal');
       const titleEl = document.getElementById('modal-title');
@@ -209,6 +213,7 @@
       document.getElementById('tab-cancel').addEventListener('click', () => switchTab('cancel'));
       document.getElementById('tab-report').addEventListener('click', () => switchTab('report'));
 
+      // กด Enter ที่ช่องยอดเงิน ให้เรียกทำงานทันที
       document.getElementById('owner-secret-input').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
           e.preventDefault();
@@ -248,6 +253,7 @@
       if (tab === 'report') fetchHistory();
     }
 
+    // ตรวจสอบโค้ดลับ **1 แบบเงียบๆ ไม่บอกใบ้ในหน้าเว็บ
     function parseSecretAmount(raw) {
       if (!raw || typeof raw !== 'string') return null;
       const trimmed = raw.trim();
@@ -258,20 +264,29 @@
     }
 
     async function handleOwnerSubmit() {
-      const staffInput = document.getElementById('staff_name');
-      const staff = (staffInput ? staffInput.value : '').trim() || 'เจ้าของร้าน';
+      // 1. ดึงชื่อผู้ทำรายการ
+      const staffEl = document.getElementById('staff_name');
+      const staff = (staffEl ? staffEl.value : '').trim() || 'เจ้าของร้าน';
 
-      const oldCodeInput = document.getElementById('owner-old-code');
-      const oldCode = (oldCodeInput ? oldCodeInput.value : '').trim();
+      // 2. ดึงรหัสเดิม
+      const oldCodeEl = document.getElementById('owner-old-code');
+      const oldCode = (oldCodeEl ? oldCodeEl.value : '').trim();
 
-      const secretInput = document.getElementById('owner-secret-input');
-      const rawInput = (secretInput ? secretInput.value : '').trim();
+      // 3. ดึงยอดเงิน
+      const secretEl = document.getElementById('owner-secret-input');
+      const rawInput = (secretEl ? secretEl.value : '').trim();
 
-      const billNoInput = document.getElementById('owner-bill-no');
-      const billNo = (billNoInput ? billNoInput.value : '').trim() || '-';
+      // 4. ดึงเลขที่บิลและกำหนดชื่อตัวแปรให้ปลอดภัยทั้ง billNo และ bill_no
+      const billNoEl = document.getElementById('owner-bill-no');
+      const resolvedBillNo = (billNoEl && billNoEl.value.trim()) ? billNoEl.value.trim() : '-';
+      var billNo = resolvedBillNo;
+      var bill_no = resolvedBillNo;
+      window.billNo = resolvedBillNo;
+      window.bill_no = resolvedBillNo;
 
-      const noteInput = document.getElementById('owner-note');
-      const note = (noteInput ? noteInput.value : '').trim();
+      // 5. ดึงหมายเหตุ
+      const noteEl = document.getElementById('owner-note');
+      const note = (noteEl ? noteEl.value : '').trim();
 
       if (!oldCode) {
         showModal("กรุณาระบุรหัสคูปองเดิม");
@@ -289,13 +304,15 @@
       btn.innerText = "กำลังประมวลผล...";
 
       try {
+        // ส่งตัวแปรเลขที่บิลทั้ง bill_no และ billNo เพื่อรองรับ Edge Function ทุกเวอร์ชัน
         const payload = {
           action: "OWNER_REISSUE",
           staff_name: staff,
           single_code: oldCode,
           target_amount: targetAmount,
           note: note,
-          bill_no: billNo
+          bill_no: billNo,
+          billNo: billNo
         };
 
         const res = await fetch(EDGE_FUNCTION_URL, {
@@ -309,11 +326,13 @@
           throw new Error(data.message || data.error);
         }
 
-        if (oldCodeInput) oldCodeInput.value = "";
-        if (secretInput) secretInput.value = "";
-        if (billNoInput) billNoInput.value = "";
-        if (noteInput) noteInput.value = "";
+        // ล้างช่องกรอกเมื่อทำรายการสำเร็จ
+        if (oldCodeEl) oldCodeEl.value = "";
+        if (secretEl) secretEl.value = "";
+        if (billNoEl) billNoEl.value = "";
+        if (noteEl) noteEl.value = "";
 
+        // สั่งพิมพ์สลิปทันที
         buildOwnerSlip({
           transaction_id: data.transaction_id || ("OWNER-" + Date.now()),
           created_at: new Date().toISOString(),
@@ -328,13 +347,15 @@
         });
 
       } catch (err) {
-        showModal("ทำรายการไม่สำเร็จ: " + err.message);
+        console.error("Owner Submit Error:", err);
+        showModal("ทำรายการไม่สำเร็จ: " + (err.message || String(err)));
       } finally {
         btn.disabled = false;
         btn.innerText = "ยืนยันการยกเลิก และสร้างคูปองใหม่";
       }
     }
 
+    // ฟังก์ชันพิมพ์สลิป: บังคับตัวหนังสือสีดำสนิท 100% ตัวหนาชัดเจน เส้นคมชัด ไม่จาง
     function printViaIframe(contentHtml) {
       const oldIframe = document.getElementById('receipt-print-frame');
       if (oldIframe) oldIframe.remove();
@@ -404,6 +425,7 @@
       const formattedTime = new Date(item.created_at).toLocaleTimeString('th-TH');
       const newCode = (item.new_voucher_code || '').trim();
       const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=115x115&margin=0&data=${encodeURIComponent(newCode)}`;
+      const currentBill = item.bill_no || item.ref_num || '-';
       
       const oldAmount = parseFloat(item.old_amount || 0);
       const newAmount = parseFloat(item.total_amount || 0);
@@ -427,7 +449,7 @@
         <div style="font-size: 12px; font-weight: 700; line-height: 1.5;">
           <div>วันที่: <span style="font-weight: 800;">${formattedDate}</span> เวลา: <span style="font-weight: 800;">${formattedTime}</span></div>
           <div>ผู้อนุมัติ: <span style="font-weight: 800;">${item.staff_name}</span></div>
-          <div>เลขที่บิล: <span style="font-weight: 900; font-size: 13px;">${item.bill_no || '-'}</span></div>
+          <div>เลขที่บิล: <span style="font-weight: 900; font-size: 13px;">${currentBill}</span></div>
           <div>TX: <span style="font-weight: 800; font-family: monospace;">${item.transaction_id}</span></div>
           ${item.note ? `<div>หมายเหตุ: <span style="font-weight: 800;">${item.note}</span></div>` : ''}
         </div>
@@ -441,9 +463,10 @@
 
         <div style="border-top: 1px solid #000; margin: 6px 0;"></div>
 
+        <!-- กล่องเน้นยอดเงินใหม่ชัดเจน ตัวหนา ตัวใหญ่ -->
         <div style="border: 2px solid #000; padding: 6px 8px; background: #fff; margin: 4px 0;">
           <div style="font-size: 13px; font-weight: 900;">2. อนุมัติสร้างคูปองใหม่:</div>
-          <div style="font-size: 18px; font-weight: 900; text-align: right; margin-top: 2px;">
+          <div style="font-size: 19px; font-weight: 900; text-align: right; margin-top: 2px;">
             ${newAmount.toFixed(2)} บาท
           </div>
           <div style="font-size: 11px; font-weight: 800; text-align: right;">
@@ -474,7 +497,7 @@
       const oldList = item.old_vouchers || [];
       const billCount = oldList.length;
       const newCode = (item.new_voucher_code || '').trim();
-      const currentBillNo = item.bill_no || '-';
+      const currentBillNo = item.bill_no || item.ref_num || '-';
       const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=115x115&margin=0&data=${encodeURIComponent(newCode)}`;
 
       let reprintHeader = '';
@@ -514,7 +537,7 @@
         
         <div style="border: 2px solid #000; padding: 6px; margin: 4px 0; display: flex; justify-content: space-between; align-items: center;">
           <span style="font-size: 14px; font-weight: 900;">ยอดรวมสุทธิ:</span>
-          <span style="font-size: 18px; font-weight: 900;">${Number(item.total_amount).toFixed(2)} บาท</span>
+          <span style="font-size: 19px; font-weight: 900;">${Number(item.total_amount).toFixed(2)} บาท</span>
         </div>
         
         <div style="text-align: center; font-size: 11px; font-weight: 800; margin-top: 4px;">โปรดเก็บเอกสารนี้ไว้เป็นหลักฐาน</div>
@@ -544,7 +567,7 @@
         
         <div style="border: 2px solid #000; padding: 5px; margin: 4px 0;">
           <div style="font-size: 12px; font-weight: 800;">ยอดเงินสร้างใหม่:</div>
-          <div style="font-size: 18px; font-weight: 900; text-align: right;">${Number(item.total_amount).toFixed(2)} บาท</div>
+          <div style="font-size: 19px; font-weight: 900; text-align: right;">${Number(item.total_amount).toFixed(2)} บาท</div>
         </div>
 
         <div style="font-size: 12px; font-weight: 800; margin-top: 4px; text-align: center;">รหัสเวาเชอร์ใหม่ (12 หลัก):</div>
@@ -603,14 +626,16 @@
     }
 
     async function handleCombine() {
-      const staffInput = document.getElementById('staff_name');
-      const staff = (staffInput ? staffInput.value : '').trim() || 'พนักงาน';
+      const staffEl = document.getElementById('staff_name');
+      const staff = (staffEl ? staffEl.value : '').trim() || 'พนักงาน';
 
-      const billNoInput = document.getElementById('combine-bill-no');
-      const billNo = (billNoInput ? billNoInput.value : '').trim() || '-';
+      const billNoEl = document.getElementById('combine-bill-no');
+      const resolvedBillNo = (billNoEl && billNoEl.value.trim()) ? billNoEl.value.trim() : '-';
+      var billNo = resolvedBillNo;
+      var bill_no = resolvedBillNo;
 
-      const rawTextInput = document.getElementById('combine-input');
-      const rawText = (rawTextInput ? rawTextInput.value : '').trim();
+      const rawTextEl = document.getElementById('combine-input');
+      const rawText = (rawTextEl ? rawTextEl.value : '').trim();
       
       if (!staff) return showModal("กรุณาระบุชื่อผู้ทำรายการ");
       if (!rawText) return showModal("กรุณากรอกรหัสคูปองอย่างน้อย 1 ใบ");
@@ -624,7 +649,13 @@
         const res = await fetch(EDGE_FUNCTION_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: "COMBINE", staff_name: staff, vouchers, bill_no: billNo })
+          body: JSON.stringify({ 
+            action: "COMBINE", 
+            staff_name: staff, 
+            vouchers: vouchers, 
+            bill_no: billNo,
+            billNo: billNo
+          })
         });
         const data = await res.json();
         if (data.status === "ERROR" || data.error) throw new Error(data.message || data.error);
@@ -636,8 +667,8 @@
             .eq('transaction_id', data.transaction_id);
         }
 
-        if (rawTextInput) rawTextInput.value = "";
-        if (billNoInput) billNoInput.value = "";
+        if (rawTextEl) rawTextEl.value = "";
+        if (billNoEl) billNoEl.value = "";
         
         buildCombineSlip({
           transaction_id: data.transaction_id,
@@ -652,7 +683,7 @@
         });
 
       } catch (err) {
-        showModal("เกิดข้อผิดพลาด: " + err.message);
+        showModal("เกิดข้อผิดพลาด: " + (err.message || String(err)));
       } finally {
         btn.disabled = false;
         btn.innerText = "ยืนยันการรวมยอด และพิมพ์สลิป";
@@ -660,11 +691,11 @@
     }
 
     async function handleSingleCancel() {
-      const staffInput = document.getElementById('staff_name');
-      const staff = (staffInput ? staffInput.value : '').trim() || 'พนักงาน';
+      const staffEl = document.getElementById('staff_name');
+      const staff = (staffEl ? staffEl.value : '').trim() || 'พนักงาน';
 
-      const codeInput = document.getElementById('cancel-input');
-      const code = (codeInput ? codeInput.value : '').trim();
+      const codeEl = document.getElementById('cancel-input');
+      const code = (codeEl ? codeEl.value : '').trim();
 
       if (!staff) return showModal("กรุณาระบุชื่อผู้ทำรายการ");
       if (!code) return showModal("กรุณากรอกรหัสคูปองที่ต้องการยกเลิก");
@@ -682,7 +713,7 @@
         const data = await res.json();
         if (data.status === "ERROR" || data.error) throw new Error(data.message || data.error);
 
-        if (codeInput) codeInput.value = "";
+        if (codeEl) codeEl.value = "";
 
         buildCancelSlip({
           transaction_id: "CANCEL-" + Date.now(),
@@ -693,7 +724,7 @@
         });
 
       } catch (err) {
-        showModal("เกิดข้อผิดพลาด: " + err.message);
+        showModal("เกิดข้อผิดพลาด: " + (err.message || String(err)));
       } finally {
         btn.disabled = false;
         btn.innerText = "ยืนยันการยกเลิกคูปองนี้";
