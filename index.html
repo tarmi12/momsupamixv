@@ -9,7 +9,6 @@
 </head>
 <body class="bg-slate-100 text-gray-900 min-h-screen text-base">
 
-  <!-- กล่องข้อความแจ้งเตือน Modal ในตัว ไม่อาศัย alert() ของเบราว์เซอร์ -->
   <div id="custom-modal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center hidden p-4">
     <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-200 text-center space-y-4">
       <div id="modal-title" class="text-lg font-black text-slate-900">แจ้งเตือน</div>
@@ -20,17 +19,31 @@
     </div>
   </div>
 
-  <!-- ขนาดความกว้าง max-w-2xl ซูม 120% แล้วพอดีสายตา ไม่ล้นขอบจอ -->
-  <div class="max-w-2xl mx-auto p-4 md:p-6">
-    <!-- แถบหัวเรื่อง พร้อมป้ายเวอร์ชัน v3.1 FIXED -->
+  <div id="confirm-modal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-200 text-center space-y-4">
+      <div id="confirm-title" class="text-lg font-black text-slate-900">ยืนยันการทำรายการ</div>
+      <p id="confirm-message" class="text-sm font-semibold text-slate-600 leading-relaxed whitespace-pre-line"></p>
+      <div class="flex gap-2 pt-2">
+        <button id="confirm-cancel-btn" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-2.5 rounded-xl transition">
+          ยกเลิก
+        </button>
+        <button id="confirm-ok-btn" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl transition">
+          ยืนยัน
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-5xl mx-auto p-4 md:p-6">
+    <!-- Header bar -->
     <div class="flex flex-col md:flex-row justify-between items-center bg-slate-900 text-white p-5 rounded-2xl shadow mb-6 gap-4">
       <div>
         <div class="flex items-center gap-2">
           <span class="bg-amber-500 text-black text-xs font-black px-2.5 py-1 rounded">OWNER ONLY</span>
-          <span class="bg-emerald-500 text-white text-[10px] font-black px-2 py-0.5 rounded tracking-wide">v3.1 FIXED</span>
+          <span class="bg-emerald-500 text-white text-[10px] font-black px-2 py-0.5 rounded tracking-wide">v5.0 FRESH</span>
           <h1 class="text-2xl font-black tracking-wide">Tiger Pay Management</h1>
         </div>
-        <p class="text-sm text-slate-300 mt-1">แผงควบคุมระดับผู้บริหาร: ยกเลิก/ออกคูปองพิเศษ รวมบิล</p>
+        <p class="text-sm text-slate-300 mt-1">แผงควบคุมระดับผู้บริหาร: ยกเลิก/ออกคูปองพิเศษ รวมบิล และตรวจสอบประวัติ</p>
       </div>
       <div class="flex items-center gap-2 w-full md:w-auto">
         <label class="text-base font-bold text-slate-200 whitespace-nowrap">ผู้ทำรายการ:</label>
@@ -38,24 +51,21 @@
       </div>
     </div>
 
-    <!-- เมนู 4 แท็บ ตัวอักษรใหญ่ ชัดเจน -->
+    <!-- Tab navigation -->
     <div class="flex bg-slate-200 p-1.5 rounded-2xl mb-6 font-bold text-sm md:text-base overflow-x-auto gap-1">
-      <button id="tab-owner" class="flex-1 py-3 px-3 rounded-xl bg-white shadow text-slate-900 font-extrabold transition whitespace-nowrap">⭐ ยกเลิก & ออกยอดใหม่</button>
-      <button id="tab-combine" class="flex-1 py-3 px-3 rounded-xl text-slate-600 transition whitespace-nowrap">1. รวมยอดคูปอง</button>
-      <button id="tab-cancel" class="flex-1 py-3 px-3 rounded-xl text-slate-600 transition whitespace-nowrap">2. ยกเลิกเดี่ยว</button>
-      <button id="tab-report" class="flex-1 py-3 px-3 rounded-xl text-slate-600 transition whitespace-nowrap">3. ประวัติ & Reprint</button>
+      <button id="tab-owner" class="flex-1 py-3 px-4 rounded-xl bg-white shadow text-slate-900 font-extrabold transition whitespace-nowrap">⭐ ยกเลิก & ออกยอดใหม่</button>
+      <button id="tab-combine" class="flex-1 py-3 px-4 rounded-xl text-slate-600 transition whitespace-nowrap">1. รวมยอดคูปอง</button>
+      <button id="tab-cancel" class="flex-1 py-3 px-4 rounded-xl text-slate-600 transition whitespace-nowrap">2. ยกเลิกเดี่ยว</button>
+      <button id="tab-report" class="flex-1 py-3 px-4 rounded-xl text-slate-600 transition whitespace-nowrap">3. ประวัติ & Reprint</button>
     </div>
 
-    <!-- ================= หน้าพิเศษ: ยกเลิก & ออกยอดใหม่ (ตัดเรื่องเลขที่บิลออกเด็ดขาด) ================= -->
     <div id="page-owner" class="bg-white p-6 md:p-8 rounded-2xl shadow border border-slate-300 space-y-5">
       <div class="border-b border-slate-200 pb-3">
-        <h2 class="text-xl font-black text-slate-900">
-          ยกเลิกคูปองเดิม และออกยอดใหม่
-        </h2>
+        <h2 class="text-xl font-black text-slate-900">ยกเลิกคูปองเดิม และออกยอดใหม่</h2>
         <p class="text-sm text-slate-600 mt-1">ระบุรหัสคูปองเดิมและยอดเงินที่ต้องการออกแทนที่</p>
       </div>
 
-      <div class="space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label class="text-base font-bold text-gray-800">1. รหัสคูปองเดิมที่ต้องการยกเลิก:</label>
           <input id="owner-old-code" type="text" placeholder="สแกนหรือพิมพ์รหัส 12 หลักเดิมที่นี่" class="w-full border-2 border-slate-300 p-3 rounded-xl font-mono text-base md:text-lg focus:ring-2 focus:ring-slate-800 outline-none bg-slate-50 mt-1 font-bold text-slate-800" />
@@ -63,22 +73,20 @@
 
         <div>
           <label class="text-base font-bold text-gray-800">2. ยอดเงิน:</label>
-          <!-- ช่องกรอกยอดเงินปกติ ไม่มีคำใบ้ พิมพ์ยอดเงิน**1 แล้วกด Enter ได้ทันที -->
           <input id="owner-secret-input" type="text" placeholder="0.00" class="w-full border-2 border-slate-300 p-3 rounded-xl font-mono text-lg md:text-xl focus:ring-2 focus:ring-slate-800 outline-none bg-slate-50 font-black text-slate-900 mt-1" autocomplete="off" />
-        </div>
-
-        <div>
-          <label class="text-sm font-bold text-gray-700">หมายเหตุ / เหตุผลการแก้ไข (ถ้ามี):</label>
-          <input id="owner-note" type="text" placeholder="ระบุหมายเหตุ เช่น ชดเชยยอดชั่ง, แก้ไขรายการ" class="w-full border-2 border-slate-200 p-3 rounded-xl text-base focus:ring-2 focus:ring-slate-800 outline-none mt-1 font-semibold" />
         </div>
       </div>
 
-      <button id="btn-owner-submit" class="w-full bg-slate-900 hover:bg-black text-white font-black py-4 rounded-xl shadow-lg transition text-lg mt-3 active:scale-[0.99]">
+      <div>
+        <label class="text-sm font-bold text-gray-700">หมายเหตุ / เหตุผลการแก้ไข (ถ้ามี):</label>
+        <input id="owner-note" type="text" placeholder="ระบุหมายเหตุ" class="w-full border-2 border-slate-200 p-3 rounded-xl text-base focus:ring-2 focus:ring-slate-800 outline-none mt-1 font-semibold" />
+      </div>
+
+      <button id="btn-owner-submit" class="w-full bg-slate-900 hover:bg-black text-white font-black py-4 rounded-xl shadow-lg transition text-lg mt-2 active:scale-[0.99]">
         ยืนยันการยกเลิก และสร้างคูปองใหม่
       </button>
     </div>
 
-    <!-- ================= หน้า 1: รวมยอดคูปอง ================= -->
     <div id="page-combine" class="hidden bg-white p-6 md:p-8 rounded-2xl shadow border border-slate-300 space-y-5">
       <div class="border-b border-slate-200 pb-3">
         <h2 class="text-xl font-black text-blue-900">รวมคูปองหลายใบ เป็นยอดเดียว</h2>
@@ -100,7 +108,6 @@
       </button>
     </div>
 
-    <!-- ================= หน้า 2: ยกเลิกเดี่ยว ================= -->
     <div id="page-cancel" class="hidden bg-white p-6 md:p-8 rounded-2xl shadow border border-slate-300 space-y-5">
       <div class="border-b border-slate-200 pb-3">
         <h2 class="text-xl font-black text-red-600">ยกเลิกคูปองเดี่ยว</h2>
@@ -117,12 +124,11 @@
       </button>
     </div>
 
-    <!-- ================= หน้า 3: ประวัติ & Reprint ================= -->
     <div id="page-report" class="hidden bg-white p-6 rounded-2xl shadow border border-slate-300 space-y-4">
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b pb-3">
         <div>
           <h2 class="text-xl font-black text-gray-900">ประวัติการทำรายการ</h2>
-          <p class="text-xs text-gray-500">แสดง 50 รายการล่าสุด พร้อมระบุผู้ Reprint และเวลา</p>
+          <p class="text-xs text-gray-500">แสดง 50 รายการล่าสุด พร้อมระบุผู้ทำรายการและประวัติการ Reprint</p>
         </div>
         <button id="btn-refresh-history" class="text-sm bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-xl border font-bold shadow-sm">🔄 โหลดใหม่</button>
       </div>
@@ -146,7 +152,6 @@
         </table>
       </div>
 
-      <!-- Pagination -->
       <div class="flex items-center justify-between pt-3 border-t text-sm font-semibold">
         <div id="page-info" class="text-xs text-gray-500"></div>
         <div class="flex items-center gap-2">
@@ -159,7 +164,6 @@
   </div>
 
   <script>
-    // ประกาศตัวแปรสำรองระดับ Global ถาวร ป้องกันข้อผิดพลาด ReferenceError ทุกจุด
     var billNo = "-";
     var bill_no = "-";
     window.billNo = "-";
@@ -167,7 +171,7 @@
 
     const SUPABASE_URL = "https://xodxqqnjkgnihkpurhdf.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvZHhxcW5qa2duaWhrcHVyaGRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0Nzk4NzYsImV4cCI6MjEwNTA1NTg3Nn0.6nF_7NURfTJHolexLrpp1QzrwTH67-2gUvAE9pWSMD8";
-    const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/tiger-service`;
+    const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/smart-worker`;
 
     const PAGE_SIZE = 50;
     let currentPage = 1;
@@ -191,6 +195,23 @@
       if (modal) modal.classList.add('hidden');
     }
 
+    let confirmCallback = null;
+    function showConfirm(message, onConfirm) {
+      const modal = document.getElementById('confirm-modal');
+      const msgEl = document.getElementById('confirm-message');
+      if (modal && msgEl) {
+        msgEl.innerText = message;
+        confirmCallback = onConfirm;
+        modal.classList.remove('hidden');
+      }
+    }
+
+    function hideConfirm() {
+      const modal = document.getElementById('confirm-modal');
+      if (modal) modal.classList.add('hidden');
+      confirmCallback = null;
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
       try {
         if (window.supabase) {
@@ -205,12 +226,17 @@
         if (e.target.id === 'custom-modal') hideModal();
       });
 
+      document.getElementById('confirm-cancel-btn').addEventListener('click', hideConfirm);
+      document.getElementById('confirm-ok-btn').addEventListener('click', () => {
+        if (confirmCallback) confirmCallback();
+        hideConfirm();
+      });
+
       document.getElementById('tab-owner').addEventListener('click', () => switchTab('owner'));
       document.getElementById('tab-combine').addEventListener('click', () => switchTab('combine'));
       document.getElementById('tab-cancel').addEventListener('click', () => switchTab('cancel'));
       document.getElementById('tab-report').addEventListener('click', () => switchTab('report'));
 
-      // กด Enter ที่ช่องยอดเงิน ให้เรียกทำงานทันที
       document.getElementById('owner-secret-input').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
           e.preventDefault();
@@ -236,7 +262,7 @@
         const btn = document.getElementById(`tab-${t}`);
         if (page && btn) {
           page.classList.add('hidden');
-          btn.className = "flex-1 py-3 px-3 rounded-xl text-slate-600 transition whitespace-nowrap";
+          btn.className = "flex-1 py-3 px-4 rounded-xl text-slate-600 transition whitespace-nowrap";
         }
       });
 
@@ -244,7 +270,7 @@
       const activeBtn = document.getElementById(`tab-${tab}`);
       if (activePage && activeBtn) {
         activePage.classList.remove('hidden');
-        activeBtn.className = "flex-1 py-3 px-3 rounded-xl bg-white shadow text-slate-900 font-black transition whitespace-nowrap";
+        activeBtn.className = "flex-1 py-3 px-4 rounded-xl bg-white shadow text-slate-900 font-black transition whitespace-nowrap";
       }
 
       if (tab === 'report') fetchHistory();
@@ -288,14 +314,14 @@
       btn.innerText = "กำลังประมวลผล...";
 
       try {
-        // ส่ง bill_no เป็น string ค่าคงที่ "-" โดยไม่ต้องเรียกตัวแปร billNo อีกต่อไป
         const payload = {
           action: "OWNER_REISSUE",
           staff_name: staff,
           single_code: oldCode,
           target_amount: targetAmount,
           note: note,
-          bill_no: "-"
+          bill_no: "-",
+          billNo: "-"
         };
 
         const res = await fetch(EDGE_FUNCTION_URL, {
@@ -306,15 +332,13 @@
 
         const data = await res.json();
         if (data.status === "ERROR" || data.error) {
-          throw new Error(data.message || data.error || "เกิดข้อผิดพลาดจากระบบ");
+          throw new Error(data.message || data.error || "เกิดข้อผิดพลาด");
         }
 
-        // ล้างช่องกรอกเมื่อทำรายการสำเร็จ
         if (oldCodeEl) oldCodeEl.value = "";
         if (secretEl) secretEl.value = "";
         if (noteEl) noteEl.value = "";
 
-        // สั่งพิมพ์สลิปทันที
         buildOwnerSlip({
           transaction_id: data.transaction_id || ("OWNER-" + Date.now()),
           created_at: new Date().toISOString(),
@@ -329,7 +353,6 @@
         });
 
       } catch (err) {
-        console.error("Owner Submit Error:", err);
         showModal("ทำรายการไม่สำเร็จ: " + (err.message || String(err)));
       } finally {
         btn.disabled = false;
@@ -375,9 +398,7 @@
             * { box-sizing: border-box; color: #000000 !important; }
           </style>
         </head>
-        <body>
-          ${contentHtml}
-        </body>
+        <body>${contentHtml}</body>
         </html>
       `);
       doc.close();
@@ -442,7 +463,6 @@
 
         <div style="border-top: 1px solid #000; margin: 6px 0;"></div>
 
-        <!-- กล่องเน้นยอดเงินใหม่ชัดเจน ตัวหนา ตัวใหญ่ ไม่จาง -->
         <div style="border: 2px solid #000; padding: 6px 8px; background: #fff; margin: 4px 0;">
           <div style="font-size: 13px; font-weight: 900;">2. อนุมัติสร้างคูปองใหม่:</div>
           <div style="font-size: 19px; font-weight: 900; text-align: right; margin-top: 2px;">
@@ -630,7 +650,8 @@
             action: "COMBINE", 
             staff_name: staff, 
             vouchers: vouchers, 
-            bill_no: combineBillNo
+            bill_no: combineBillNo,
+            billNo: combineBillNo
           })
         });
         const data = await res.json();
@@ -669,35 +690,37 @@
       if (!staff) return showModal("กรุณาระบุชื่อผู้ทำรายการ");
       if (!code) return showModal("กรุณากรอกรหัสคูปองที่ต้องการยกเลิก");
 
-      const btn = document.getElementById('btn-cancel');
-      btn.disabled = true;
-      btn.innerText = "กำลังยกเลิก...";
+      showConfirm(`ยืนยันที่จะยกเลิกคูปองรหัส "${code}" ใช่หรือไม่?`, async () => {
+        const btn = document.getElementById('btn-cancel');
+        btn.disabled = true;
+        btn.innerText = "กำลังยกเลิก...";
 
-      try {
-        const res = await fetch(EDGE_FUNCTION_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: "CANCEL_SINGLE", staff_name: staff, single_code: code })
-        });
-        const data = await res.json();
-        if (data.status === "ERROR" || data.error) throw new Error(data.message || data.error);
+        try {
+          const res = await fetch(EDGE_FUNCTION_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: "CANCEL_SINGLE", staff_name: staff, single_code: code })
+          });
+          const data = await res.json();
+          if (data.status === "ERROR" || data.error) throw new Error(data.message || data.error);
 
-        if (codeEl) codeEl.value = "";
+          if (codeEl) codeEl.value = "";
 
-        buildCancelSlip({
-          transaction_id: "CANCEL-" + Date.now(),
-          created_at: new Date().toISOString(),
-          staff_name: staff,
-          voucher_code: code,
-          is_reprint: false
-        });
+          buildCancelSlip({
+            transaction_id: "CANCEL-" + Date.now(),
+            created_at: new Date().toISOString(),
+            staff_name: staff,
+            voucher_code: code,
+            is_reprint: false
+          });
 
-      } catch (err) {
-        showModal("เกิดข้อผิดพลาด: " + (err.message || String(err)));
-      } finally {
-        btn.disabled = false;
-        btn.innerText = "ยืนยันการยกเลิกคูปองนี้";
-      }
+        } catch (err) {
+          showModal("เกิดข้อผิดพลาด: " + (err.message || String(err)));
+        } finally {
+          btn.disabled = false;
+          btn.innerText = "ยืนยันการยกเลิกคูปองนี้";
+        }
+      });
     }
 
     function changePage(direction) {
