@@ -225,13 +225,21 @@
     }
 
     async function handleOwnerSubmit() {
-      const staff = (document.getElementById('staff_name')?.value || '').trim() || 'OWNER';
-      const oldCode = (document.getElementById('owner-old-code')?.value || '').trim();
-      const rawInput = (document.getElementById('owner-secret-input')?.value || '').trim();
+      const staffInput = document.getElementById('staff_name');
+      const staff = (staffInput ? staffInput.value : '').trim() || 'เจ้าของร้าน';
+
+      const oldCodeInput = document.getElementById('owner-old-code');
+      const oldCode = (oldCodeInput ? oldCodeInput.value : '').trim();
+
+      const secretInput = document.getElementById('owner-secret-input');
+      const rawInput = (secretInput ? secretInput.value : '').trim();
+
       const billNoInput = document.getElementById('owner-bill-no');
-      const billNo = (billNoInput ? billNoInput.value : '').trim() || '-';
-      const bill_no = billNo;
-      const note = (document.getElementById('owner-note')?.value || '').trim();
+      const bill_no = (billNoInput ? billNoInput.value : '').trim() || '-';
+      const billNo = bill_no; // ป้องกันปัญหาตัวแปร billNo is not defined
+
+      const noteInput = document.getElementById('owner-note');
+      const note = (noteInput ? noteInput.value : '').trim();
 
       if (!oldCode) {
         alert("กรุณาระบุรหัสคูปองเดิม");
@@ -255,8 +263,8 @@
           single_code: oldCode,
           target_amount: targetAmount,
           note: note,
-          bill_no: billNo,
-          billNo: billNo
+          bill_no: bill_no,
+          billNo: bill_no
         };
 
         const res = await fetch(EDGE_FUNCTION_URL, {
@@ -270,10 +278,10 @@
           throw new Error(data.message || data.error);
         }
 
-        document.getElementById('owner-old-code').value = "";
-        document.getElementById('owner-secret-input').value = "";
+        if (oldCodeInput) oldCodeInput.value = "";
+        if (secretInput) secretInput.value = "";
         if (billNoInput) billNoInput.value = "";
-        document.getElementById('owner-note').value = "";
+        if (noteInput) noteInput.value = "";
 
         buildOwnerSlip({
           transaction_id: data.transaction_id || ("OWNER-" + Date.now()),
@@ -283,7 +291,7 @@
           old_amount: data.old_amount || 0,
           new_voucher_code: data.new_voucher,
           total_amount: data.total_amount || targetAmount,
-          bill_no: billNo,
+          bill_no: bill_no,
           note: note,
           is_reprint: false
         });
@@ -564,10 +572,15 @@
     }
 
     async function handleCombine() {
-      const staff = (document.getElementById('staff_name')?.value || '').trim();
-      const billNo = (document.getElementById('combine-bill-no')?.value || '').trim() || '-';
-      const bill_no = billNo;
-      const rawText = (document.getElementById('combine-input')?.value || '').trim();
+      const staffInput = document.getElementById('staff_name');
+      const staff = (staffInput ? staffInput.value : '').trim() || 'พนักงาน';
+
+      const billNoInput = document.getElementById('combine-bill-no');
+      const bill_no = (billNoInput ? billNoInput.value : '').trim() || '-';
+      const billNo = bill_no;
+
+      const rawTextInput = document.getElementById('combine-input');
+      const rawText = (rawTextInput ? rawTextInput.value : '').trim();
       
       if (!staff) return alert("กรุณาระบุชื่อผู้ทำรายการ");
       if (!rawText) return alert("กรุณากรอกรหัสคูปองอย่างน้อย 1 ใบ");
@@ -581,7 +594,7 @@
         const res = await fetch(EDGE_FUNCTION_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: "COMBINE", staff_name: staff, vouchers, bill_no: billNo, billNo: billNo })
+          body: JSON.stringify({ action: "COMBINE", staff_name: staff, vouchers, bill_no: bill_no, billNo: bill_no })
         });
         const data = await res.json();
         if (data.status === "ERROR" || data.error) throw new Error(data.message || data.error);
@@ -589,19 +602,19 @@
         if (supabaseClient && data.transaction_id) {
           await supabaseClient
             .from('voucher_transactions')
-            .update({ ref_num: billNo })
+            .update({ ref_num: bill_no })
             .eq('transaction_id', data.transaction_id);
         }
 
-        document.getElementById('combine-input').value = "";
-        document.getElementById('combine-bill-no').value = "";
+        if (rawTextInput) rawTextInput.value = "";
+        if (billNoInput) billNoInput.value = "";
         
         buildCombineSlip({
           transaction_id: data.transaction_id,
           created_at: new Date().toISOString(),
           staff_name: staff,
           action_type: "COMBINE",
-          bill_no: billNo,
+          bill_no: bill_no,
           old_vouchers: data.validated_vouchers,
           total_amount: data.total_amount,
           new_voucher_code: data.new_voucher,
@@ -617,12 +630,14 @@
     }
 
     async function handleSingleCancel() {
-      const staff = (document.getElementById('staff_name')?.value || '').trim();
-      const code = (document.getElementById('cancel-input')?.value || '').trim();
+      const staffInput = document.getElementById('staff_name');
+      const staff = (staffInput ? staffInput.value : '').trim() || 'พนักงาน';
+
+      const codeInput = document.getElementById('cancel-input');
+      const code = (codeInput ? codeInput.value : '').trim();
+
       if (!staff) return alert("กรุณาระบุชื่อผู้ทำรายการ");
       if (!code) return alert("กรุณากรอกรหัสคูปองที่ต้องการยกเลิก");
-
-      if (!confirm(`ยืนยันที่จะยกเลิกคูปองรหัส "${code}" ใช่หรือไม่?`)) return;
 
       const btn = document.getElementById('btn-cancel');
       btn.disabled = true;
@@ -637,7 +652,7 @@
         const data = await res.json();
         if (data.status === "ERROR" || data.error) throw new Error(data.message || data.error);
 
-        document.getElementById('cancel-input').value = "";
+        if (codeInput) codeInput.value = "";
 
         buildCancelSlip({
           transaction_id: "CANCEL-" + Date.now(),
@@ -753,20 +768,25 @@
       const row = cachedRows[index];
       if (!row) return;
 
-      const currentStaff = (document.getElementById('staff_name')?.value || '').trim();
-      if (!currentStaff) return alert("กรุณาระบุชื่อผู้สั่ง Reprint");
+      const currentStaff = (document.getElementById('staff_name')?.value || '').trim() || 'เจ้าของร้าน';
 
       const now = new Date();
       if (supabaseClient) {
-        await supabaseClient
-          .from('voucher_transactions')
-          .update({
-            reprint_count: (row.reprint_count || 0) + 1,
-            last_reprint_at: now.toISOString(),
-            reprinted_by: currentStaff
-          })
-          .eq('id', row.id);
+        try {
+          await supabaseClient
+            .from('voucher_transactions')
+            .update({
+              reprint_count: (row.reprint_count || 0) + 1,
+              last_reprint_at: now.toISOString(),
+              reprinted_by: currentStaff
+            })
+            .eq('id', row.id);
+        } catch (e) {
+          console.warn("Update reprint info warning:", e);
+        }
       }
+
+      const reprintTimeStr = now.toLocaleDateString('th-TH') + ' ' + now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
       if (row.action_type === 'OWNER_REISSUE') {
         buildOwnerSlip({
@@ -776,7 +796,7 @@
           note: row.error_message ? row.error_message.replace('หมายเหตุ: ', '') : '',
           bill_no: row.ref_num && row.ref_num !== 'ERROR' ? row.ref_num : '-',
           is_reprint: true,
-          reprint_time: now.toLocaleString('th-TH'),
+          reprint_time: reprintTimeStr,
           reprinted_by: currentStaff
         });
       } else if (row.action_type === 'COMBINE') {
@@ -784,7 +804,7 @@
           ...row,
           bill_no: row.ref_num && row.ref_num !== 'ERROR' ? row.ref_num : '-',
           is_reprint: true,
-          reprint_time: now.toLocaleString('th-TH'),
+          reprint_time: reprintTimeStr,
           reprinted_by: currentStaff
         });
       } else {
@@ -792,7 +812,7 @@
           ...row,
           voucher_code: row.old_vouchers?.[0]?.code || '-',
           is_reprint: true,
-          reprint_time: now.toLocaleString('th-TH'),
+          reprint_time: reprintTimeStr,
           reprinted_by: currentStaff
         });
       }
