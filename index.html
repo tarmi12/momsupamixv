@@ -9,13 +9,13 @@
 </head>
 <body class="bg-slate-100 text-gray-900 min-h-screen text-base">
 
-  <!-- ปรับลดความกว้างเหลือ max-w-2xl เพื่อให้ซูม 120% แล้วพอดีจอ ไม่กว้างเกินไป -->
+  <!-- ขนาดความกว้าง max-w-2xl พอดีสายตา ซูม 120% แล้วไม่ล้นขอบจอ -->
   <div class="max-w-2xl mx-auto p-4 md:p-6">
     <!-- แถบหัวเรื่อง -->
     <div class="flex flex-col md:flex-row justify-between items-center bg-slate-900 text-white p-5 rounded-2xl shadow mb-6 gap-4">
       <div>
         <div class="flex items-center gap-2">
-          <span class="bg-amber-500 text-black text-xs font-bold px-2.5 py-1 rounded">OWNER ONLY</span>
+          <span class="bg-amber-500 text-black text-xs font-black px-2.5 py-1 rounded">OWNER ONLY</span>
           <h1 class="text-2xl font-black tracking-wide">Tiger Pay Management</h1>
         </div>
         <p class="text-sm text-slate-300 mt-1">แผงควบคุมระดับผู้บริหาร: ยกเลิก/ออกคูปองพิเศษ รวมบิล</p>
@@ -26,7 +26,7 @@
       </div>
     </div>
 
-    <!-- เมนู 4 แท็บ ตัวอักษรใหญ่ขึ้น -->
+    <!-- เมนู 4 แท็บ ตัวอักษรใหญ่ ชัดเจน -->
     <div class="flex bg-slate-200 p-1.5 rounded-2xl mb-6 font-bold text-sm md:text-base overflow-x-auto gap-1">
       <button id="tab-owner" class="flex-1 py-3 px-3 rounded-xl bg-white shadow text-slate-900 font-extrabold transition whitespace-nowrap">⭐ ยกเลิก & ออกยอดใหม่</button>
       <button id="tab-combine" class="flex-1 py-3 px-3 rounded-xl text-slate-600 transition whitespace-nowrap">1. รวมยอดคูปอง</button>
@@ -114,8 +114,8 @@
     <div id="page-report" class="hidden bg-white p-6 rounded-2xl shadow border border-slate-300 space-y-4">
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b pb-3">
         <div>
-          <h2 class="text-xl font-black text-gray-800">ประวัติการทำรายการ</h2>
-          <p class="text-xs text-gray-500">แสดง 50 รายการล่าสุด</p>
+          <h2 class="text-xl font-black text-gray-900">ประวัติการทำรายการ</h2>
+          <p class="text-xs text-gray-500">แสดง 50 รายการล่าสุด พร้อมประวัติการ Reprint</p>
         </div>
         <button id="btn-refresh-history" class="text-sm bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-xl border font-bold">🔄 โหลดใหม่</button>
       </div>
@@ -123,21 +123,23 @@
       <div class="overflow-x-auto">
         <table class="w-full text-left text-sm border-collapse">
           <thead>
-            <tr class="bg-gray-100 text-gray-700 border-b font-bold">
-              <th class="p-3">วันที่</th>
-              <th class="p-3">ประเภท</th>
-              <th class="p-3">ผู้ทำ</th>
-              <th class="p-3 text-right">ยอดเงิน</th>
-              <th class="p-3">คูปองใหม่</th>
-              <th class="p-3 text-center">จัดการ</th>
+            <tr class="bg-gray-100 text-gray-800 border-b text-xs md:text-sm font-extrabold">
+              <th class="p-3 whitespace-nowrap">วันที่-เวลา</th>
+              <th class="p-3 whitespace-nowrap">ประเภท</th>
+              <th class="p-3 whitespace-nowrap">ผู้ทำ</th>
+              <th class="p-3 text-right whitespace-nowrap">ยอดเงิน</th>
+              <th class="p-3 whitespace-nowrap">คูปองใหม่</th>
+              <th class="p-3 text-center whitespace-nowrap">ประวัติ Reprint</th>
+              <th class="p-3 text-center whitespace-nowrap">พิมพ์ซ้ำ</th>
             </tr>
           </thead>
           <tbody id="history-tbody" class="divide-y divide-gray-200 font-mono text-xs">
-            <tr><td colspan="6" class="p-4 text-center text-gray-400 font-sans">กำลังโหลด...</td></tr>
+            <tr><td colspan="7" class="p-4 text-center text-gray-400 font-sans">กำลังโหลด...</td></tr>
           </tbody>
         </table>
       </div>
 
+      <!-- Pagination -->
       <div class="flex items-center justify-between pt-3 border-t text-sm font-semibold">
         <div id="page-info" class="text-xs text-gray-500"></div>
         <div class="flex items-center gap-2">
@@ -214,18 +216,22 @@
     }
 
     function parseSecretAmount(raw) {
-      if (!raw || !raw.endsWith('**1')) return null;
-      const numStr = raw.slice(0, -3).trim();
+      if (!raw || typeof raw !== 'string') return null;
+      const trimmed = raw.trim();
+      if (!trimmed.endsWith('**1')) return null;
+      const numStr = trimmed.slice(0, -3).trim();
       const amount = parseFloat(numStr);
       return (!isNaN(amount) && amount > 0) ? amount : null;
     }
 
     async function handleOwnerSubmit() {
-      const staff = document.getElementById('staff_name').value.trim() || 'OWNER';
-      const oldCode = document.getElementById('owner-old-code').value.trim();
-      const rawInput = document.getElementById('owner-secret-input').value.trim();
-      const billNo = document.getElementById('owner-bill-no').value.trim() || '-';
-      const note = document.getElementById('owner-note').value.trim();
+      const staff = (document.getElementById('staff_name')?.value || '').trim() || 'OWNER';
+      const oldCode = (document.getElementById('owner-old-code')?.value || '').trim();
+      const rawInput = (document.getElementById('owner-secret-input')?.value || '').trim();
+      const billNoInput = document.getElementById('owner-bill-no');
+      const billNo = (billNoInput ? billNoInput.value : '').trim() || '-';
+      const bill_no = billNo;
+      const note = (document.getElementById('owner-note')?.value || '').trim();
 
       if (!oldCode) {
         alert("กรุณาระบุรหัสคูปองเดิม");
@@ -243,34 +249,40 @@
       btn.innerText = "กำลังประมวลผล...";
 
       try {
+        const payload = {
+          action: "OWNER_REISSUE",
+          staff_name: staff,
+          single_code: oldCode,
+          target_amount: targetAmount,
+          note: note,
+          bill_no: billNo,
+          billNo: billNo
+        };
+
         const res = await fetch(EDGE_FUNCTION_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: "OWNER_REISSUE",
-            staff_name: staff,
-            single_code: oldCode,
-            target_amount: targetAmount,
-            note: note,
-            bill_no: billNo
-          })
+          body: JSON.stringify(payload)
         });
+
         const data = await res.json();
-        if (data.status === "ERROR" || data.error) throw new Error(data.message || data.error);
+        if (data.status === "ERROR" || data.error) {
+          throw new Error(data.message || data.error);
+        }
 
         document.getElementById('owner-old-code').value = "";
         document.getElementById('owner-secret-input').value = "";
-        document.getElementById('owner-bill-no').value = "";
+        if (billNoInput) billNoInput.value = "";
         document.getElementById('owner-note').value = "";
 
         buildOwnerSlip({
-          transaction_id: data.transaction_id,
+          transaction_id: data.transaction_id || ("OWNER-" + Date.now()),
           created_at: new Date().toISOString(),
           staff_name: staff,
-          old_code: data.old_voucher_code,
-          old_amount: data.old_amount,
+          old_code: data.old_voucher_code || oldCode,
+          old_amount: data.old_amount || 0,
           new_voucher_code: data.new_voucher,
-          total_amount: data.total_amount,
+          total_amount: data.total_amount || targetAmount,
           bill_no: billNo,
           note: note,
           is_reprint: false
@@ -284,7 +296,6 @@
       }
     }
 
-    // ฟังก์ชันพิมพ์สลิป: ปรับ CSS สำหรับหัวพิมพ์ Thermal ให้ตัวหนังสือหนา ดำสนิท และคมชัด
     function printViaIframe(contentHtml) {
       const oldIframe = document.getElementById('receipt-print-frame');
       if (oldIframe) oldIframe.remove();
@@ -321,8 +332,6 @@
               -webkit-print-color-adjust: exact;
             }
             * { box-sizing: border-box; color: #000000 !important; }
-            .strong-text { font-weight: 800 !important; }
-            .highlight-box { border: 2px solid #000000; padding: 4px; margin: 4px 0; }
           </style>
         </head>
         <body>
@@ -351,9 +360,6 @@
       }
     }
 
-    // ==========================================
-    // สลิปคำสั่งเจ้าของร้าน: เน้นตัวหนาดำสนิท ตัวเลขไม่จาง
-    // ==========================================
     function buildOwnerSlip(item) {
       const formattedDate = new Date(item.created_at).toLocaleDateString('th-TH');
       const formattedTime = new Date(item.created_at).toLocaleTimeString('th-TH');
@@ -396,7 +402,6 @@
 
         <div style="border-top: 1px solid #000; margin: 6px 0;"></div>
 
-        <!-- กล่องเน้นยอดเงินใหม่ชัดเจน -->
         <div style="border: 2px solid #000; padding: 6px 8px; background: #fff; margin: 4px 0;">
           <div style="font-size: 13px; font-weight: 900;">2. อนุมัติสร้างคูปองใหม่:</div>
           <div style="font-size: 18px; font-weight: 900; text-align: right; margin-top: 2px;">
@@ -424,16 +429,13 @@
       printViaIframe(html);
     }
 
-    // ==========================================
-    // สลิปรวมยอด: ปรับตัวหนา คมชัดทั้งสองส่วน (ลูกค้า / ตู้)
-    // ==========================================
     function buildCombineSlip(item) {
       const formattedDate = new Date(item.created_at).toLocaleDateString('th-TH');
       const formattedTime = new Date(item.created_at).toLocaleTimeString('th-TH');
       const oldList = item.old_vouchers || [];
       const billCount = oldList.length;
       const newCode = (item.new_voucher_code || '').trim();
-      const billNo = item.bill_no || '-';
+      const currentBillNo = item.bill_no || '-';
       const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=115x115&margin=0&data=${encodeURIComponent(newCode)}`;
 
       let reprintHeader = '';
@@ -453,7 +455,7 @@
         <div style="font-size: 12px; font-weight: 700; line-height: 1.5;">
           <div>วันที่: <span style="font-weight: 800;">${formattedDate}</span> เวลา: <span style="font-weight: 800;">${formattedTime}</span></div>
           <div>พนักงาน: <span style="font-weight: 800;">${item.staff_name}</span></div>
-          <div>เลขที่บิล: <span style="font-weight: 900; font-size: 13px;">${billNo}</span></div>
+          <div>เลขที่บิล: <span style="font-weight: 900; font-size: 13px;">${currentBillNo}</span></div>
           <div>TX: <span style="font-weight: 800; font-family: monospace;">${item.transaction_id}</span></div>
         </div>
 
@@ -471,7 +473,6 @@
 
         <div style="border-top: 2px solid #000; margin: 6px 0;"></div>
         
-        <!-- กล่องยอดรวมสุทธิขนาดใหญ่ ชัดเจน -->
         <div style="border: 2px solid #000; padding: 6px; margin: 4px 0; display: flex; justify-content: space-between; align-items: center;">
           <span style="font-size: 14px; font-weight: 900;">ยอดรวมสุทธิ:</span>
           <span style="font-size: 18px; font-weight: 900;">${Number(item.total_amount).toFixed(2)} บาท</span>
@@ -489,7 +490,7 @@
         
         <div style="font-size: 12px; font-weight: 700; line-height: 1.5;">
           <div>วันที่: <span style="font-weight: 800;">${formattedDate}</span> เวลา: <span style="font-weight: 800;">${formattedTime}</span></div>
-          <div>พนักงาน: <span style="font-weight: 800;">${item.staff_name}</span> | บิล: <span style="font-weight: 900;">${billNo}</span></div>
+          <div>พนักงาน: <span style="font-weight: 800;">${item.staff_name}</span> | บิล: <span style="font-weight: 900;">${currentBillNo}</span></div>
           <div>TX: <span style="font-weight: 800; font-family: monospace;">${item.transaction_id}</span></div>
         </div>
 
@@ -522,9 +523,6 @@
       printViaIframe(html);
     }
 
-    // ==========================================
-    // สลิปยกเลิกเดี่ยว: ชัดเจน หนา ไม่จาง
-    // ==========================================
     function buildCancelSlip(item) {
       const formattedDate = new Date(item.created_at).toLocaleDateString('th-TH');
       const formattedTime = new Date(item.created_at).toLocaleTimeString('th-TH');
@@ -566,9 +564,10 @@
     }
 
     async function handleCombine() {
-      const staff = document.getElementById('staff_name').value.trim();
-      const billNo = document.getElementById('combine-bill-no').value.trim() || '-';
-      const rawText = document.getElementById('combine-input').value.trim();
+      const staff = (document.getElementById('staff_name')?.value || '').trim();
+      const billNo = (document.getElementById('combine-bill-no')?.value || '').trim() || '-';
+      const bill_no = billNo;
+      const rawText = (document.getElementById('combine-input')?.value || '').trim();
       
       if (!staff) return alert("กรุณาระบุชื่อผู้ทำรายการ");
       if (!rawText) return alert("กรุณากรอกรหัสคูปองอย่างน้อย 1 ใบ");
@@ -582,7 +581,7 @@
         const res = await fetch(EDGE_FUNCTION_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: "COMBINE", staff_name: staff, vouchers, bill_no: billNo })
+          body: JSON.stringify({ action: "COMBINE", staff_name: staff, vouchers, bill_no: billNo, billNo: billNo })
         });
         const data = await res.json();
         if (data.status === "ERROR" || data.error) throw new Error(data.message || data.error);
@@ -618,8 +617,8 @@
     }
 
     async function handleSingleCancel() {
-      const staff = document.getElementById('staff_name').value.trim();
-      const code = document.getElementById('cancel-input').value.trim();
+      const staff = (document.getElementById('staff_name')?.value || '').trim();
+      const code = (document.getElementById('cancel-input')?.value || '').trim();
       if (!staff) return alert("กรุณาระบุชื่อผู้ทำรายการ");
       if (!code) return alert("กรุณากรอกรหัสคูปองที่ต้องการยกเลิก");
 
@@ -667,10 +666,10 @@
 
     async function fetchHistory() {
       const tbody = document.getElementById('history-tbody');
-      tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-400 font-sans">กำลังดึงข้อมูล...</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-gray-400 font-sans">กำลังดึงข้อมูล...</td></tr>`;
 
       if (!supabaseClient) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500 font-bold font-sans">ไม่สามารถเชื่อมต่อฐานข้อมูลได้</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500 font-bold font-sans">ไม่สามารถเชื่อมต่อฐานข้อมูลได้</td></tr>`;
         return;
       }
 
@@ -684,7 +683,7 @@
         .range(from, to);
 
       if (error) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500 font-bold font-sans">โหลดข้อมูลล้มเหลว: ${error.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500 font-bold font-sans">โหลดข้อมูลล้มเหลว: ${error.message}</td></tr>`;
         return;
       }
 
@@ -697,34 +696,64 @@
       document.getElementById('btn-next-page').disabled = (currentPage >= maxPages);
 
       if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-400 font-sans">ไม่มีรายการ</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-gray-400 font-sans">ไม่มีรายการ</td></tr>`;
         return;
       }
 
       cachedRows = data;
-      tbody.innerHTML = data.map((row, idx) => `
-        <tr class="hover:bg-gray-50 border-b">
-          <td class="p-2.5 font-bold">${new Date(row.created_at).toLocaleDateString('th-TH')}</td>
-          <td class="p-2.5 font-black ${row.action_type === 'OWNER_REISSUE' ? 'text-amber-600' : (row.action_type === 'COMBINE' ? 'text-blue-600' : 'text-red-600')}">
-            ${row.action_type === 'OWNER_REISSUE' ? '👑 OWNER' : row.action_type}
-          </td>
-          <td class="p-2.5 font-semibold font-sans">${row.staff_name}</td>
-          <td class="p-2.5 font-black text-right">${Number(row.total_amount).toLocaleString()} ฿</td>
-          <td class="p-2.5 text-green-700 font-bold">${row.new_voucher_code || '-'}</td>
-          <td class="p-2.5 text-center">
-            <button onclick="triggerReprint(${idx})" class="bg-slate-800 text-white px-2.5 py-1 rounded text-xs hover:bg-black font-sans font-bold">
-              🖨️
-            </button>
-          </td>
-        </tr>
-      `).join('');
+      tbody.innerHTML = data.map((row, idx) => {
+        const createdDate = new Date(row.created_at);
+        const dateStr = createdDate.toLocaleDateString('th-TH');
+        const timeStr = createdDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
+        let reprintHtml = '<span class="text-gray-400">-</span>';
+        if (row.reprint_count > 0) {
+          const lastReprintTime = row.last_reprint_at 
+            ? new Date(row.last_reprint_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) 
+            : '';
+          reprintHtml = `
+            <div class="text-center">
+              <span class="bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded text-[11px] font-bold">
+                ${row.reprint_count} ครั้ง
+              </span>
+              <div class="text-[11px] font-bold text-gray-800 font-sans mt-1">
+                โดย: <span class="text-amber-800 font-black">${row.reprinted_by || '-'}</span>
+              </div>
+              ${lastReprintTime ? `<div class="text-[10px] text-gray-500 font-sans">(${lastReprintTime})</div>` : ''}
+            </div>
+          `;
+        }
+
+        return `
+          <tr class="hover:bg-gray-50 border-b">
+            <td class="p-2.5 font-bold whitespace-nowrap">
+              <div>${dateStr}</div>
+              <div class="text-[10px] text-gray-500 font-sans font-normal">${timeStr}</div>
+            </td>
+            <td class="p-2.5 font-black whitespace-nowrap ${row.action_type === 'OWNER_REISSUE' ? 'text-amber-600' : (row.action_type === 'COMBINE' ? 'text-blue-600' : 'text-red-600')}">
+              ${row.action_type === 'OWNER_REISSUE' ? '👑 OWNER' : row.action_type}
+            </td>
+            <td class="p-2.5 font-bold font-sans whitespace-nowrap">${row.staff_name}</td>
+            <td class="p-2.5 font-black text-right whitespace-nowrap text-slate-900">${Number(row.total_amount).toLocaleString()} ฿</td>
+            <td class="p-2.5 text-green-700 font-bold tracking-wide font-mono whitespace-nowrap">${row.new_voucher_code || '-'}</td>
+            <td class="p-2.5 whitespace-nowrap">
+              ${reprintHtml}
+            </td>
+            <td class="p-2.5 text-center whitespace-nowrap">
+              <button onclick="triggerReprint(${idx})" class="bg-slate-900 hover:bg-black text-white px-3 py-1.5 rounded-lg text-xs font-sans font-bold shadow active:scale-95 transition">
+                🖨️ Reprint
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
     }
 
     async function triggerReprint(index) {
       const row = cachedRows[index];
       if (!row) return;
 
-      const currentStaff = document.getElementById('staff_name').value.trim();
+      const currentStaff = (document.getElementById('staff_name')?.value || '').trim();
       if (!currentStaff) return alert("กรุณาระบุชื่อผู้สั่ง Reprint");
 
       const now = new Date();
