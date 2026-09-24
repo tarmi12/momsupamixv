@@ -5,6 +5,8 @@
   <title>Tiger Cashbox - Owner Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- โหลดไลบรารีสร้าง QR Code ในเครื่องโดยตรงเพื่อความแม่นยำและไม่พึ่งพาเน็ตภายนอก -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   
   <style>
     @media screen {
@@ -237,7 +239,30 @@
       container.appendChild(input);
     }
 
-    // ฟังก์ชันหลักในการติดต่อ Edge Function (รวมทั้ง Tiger API และ Supabase DB เพื่อป้องกัน CORS)
+    // ฟังก์ชันสร้าง QR Code เป็น DataURL Base64 ในเครื่องโดยตรง ไม่ต้องผ่านเน็ต
+    function generateQrBase64(text) {
+      return new Promise((resolve) => {
+        const tempDiv = document.createElement('div');
+        new QRCode(tempDiv, {
+          text: text,
+          width: 150,
+          height: 150,
+          correctLevel: QRCode.CorrectLevel.M
+        });
+        
+        setTimeout(() => {
+          const canvas = tempDiv.querySelector('canvas');
+          if (canvas) {
+            resolve(canvas.toDataURL('image/png'));
+          } else {
+            const img = tempDiv.querySelector('img');
+            resolve(img ? img.src : '');
+          }
+        }, 60);
+      });
+    }
+
+    // ฟังก์ชันหลักในการติดต่อ Edge Function
     async function callBackend(action, payload = {}) {
       const response = await fetch(EDGE_FUNCTION_URL, {
         method: "POST",
@@ -314,7 +339,7 @@
           error_message: note
         });
 
-        renderAndPrintOwnerSlip({
+        await renderAndPrintOwnerSlip({
           txId,
           dateStr: new Date().toLocaleString('th-TH'),
           owner,
@@ -333,7 +358,7 @@
       }
     }
 
-    // รวมยอดคูปอง (ปรับให้ดึงจาก response.voucher.amount โดยตรง)
+    // รวมยอดคูปอง (แยก 2 Phase: Validate ครบทุกใบก่อน -> ค่อยสั่ง Cancel)
     async function processOwnerCombine() {
       const owner = document.getElementById('owner_name').value.trim() || 'Owner';
       const ref = document.getElementById('owner_combine_ref').value.trim() || `REF-${Date.now()}`;
@@ -342,8 +367,13 @@
                           .filter(v => v.length > 0);
 
       if (inputs.length < 2) {
-        alert("ต้องระบุรหัสคูปองเดิมตั้งแต่ 2 ใบขึ้นไป");
-        return;
+        return alert("ต้องระบุรหัสคูปองเดิมตั้งแต่ 2 ใบขึ้นไป");
+      }
+
+      // ป้องกันการกรอกรหัสคูปองซ้ำในรายการเดียวกัน
+      const uniqueCodes = new Set(inputs);
+      if (uniqueCodes.size !== inputs.length) {
+        return alert("มีรหัสคูปองซ้ำกันในรายการ กรุณาตรวจสอบใหม่อีกครั้ง");
       }
 
       const btn = document.getElementById('btn-combine');
@@ -352,12 +382,14 @@
 
       try {
         let totalAmount = 0;
-        let oldVoucherDetails = [];
+        let validatedVouchers = [];
 
-        for (const code of inputs) {
+        // เฟส 1: ตรวจสอบสถานะและยอดเงินของทุกใบก่อน (ยังไม่ยกเลิกคูปอง)
+        for (let i = 0; i < inputs.length; i++) {
+          const code = inputs[i];
+          btn.innerText = `กำลังตรวจสอบใบที่ ${i + 1}/${inputs.length}...`;
+
           const showRes = await callBackend("show", { voucher_num: code });
-          
-          // ดึงข้อมูลจากคีย์ voucher ตามโครงสร้าง Response จริงของ Tiger
           const voucherObj = showRes?.voucher || showRes?.result || showRes?.data || (Array.isArray(showRes) ? showRes[0] : showRes);
 
           const rawAmt = voucherObj?.amount ?? voucherObj?.balance;
@@ -365,21 +397,27 @@
           const isUsed = String(voucherObj?.used) === "1" || voucherObj?.used === 1 || voucherObj?.used === true;
 
           if (isNaN(amt) || amt <= 0) {
-            throw new Error(`คูปอง ${code} ไม่พบยอดเงิน\nข้อมูลจาก Tiger: ${JSON.stringify(showRes)}`);
+            throw new Error(`คูปอง ${code} ไม่พบยอดเงิน หรือยอดคงเหลือไม่ถูกต้อง`);
           }
 
           if (isUsed) {
             throw new Error(`คูปอง ${code} ถูกใช้งานหรือยกเลิกไปแล้ว (used = 1)`);
           }
 
-          await callBackend("cancel", { voucher_num: code });
-          
           totalAmount += amt;
-          oldVoucherDetails.push({ code: code, amount: amt });
+          validatedVouchers.push({ code: code, amount: amt });
         }
 
-        btn.innerText = "กำลังสร้างคูปองใหม่...";
+        // เฟส 2: เมื่อทุกใบผ่านการเช็กยอดครบแล้ว จึงสั่ง Cancel ทีละใบ
+        btn.innerText = "กำลังยกเลิกคูปองเดิม...";
+        for (let i = 0; i < validatedVouchers.length; i++) {
+          const v = validatedVouchers[i];
+          btn.innerText = `กำลังยกเลิกใบที่ ${i + 1}/${validatedVouchers.length}...`;
+          await callBackend("cancel", { voucher_num: v.code });
+        }
 
+        // เฟส 3: สร้างคูปองใหม่
+        btn.innerText = "กำลังสร้างคูปองใหม่...";
         const txId = `TX-${Date.now()}`;
         const createRes = await callBackend("create", {
           amount: totalAmount.toFixed(2),
@@ -398,19 +436,26 @@
           staff_name: owner,
           total_amount: totalAmount,
           new_voucher_code: String(newCode),
-          old_vouchers: oldVoucherDetails,
+          old_vouchers: validatedVouchers,
           ref_num: ref,
           error_message: 'รวมยอดสำเร็จ'
         });
 
-        renderAndPrintCombineSlip({
+        await renderAndPrintCombineSlip({
           txId,
           dateStr: new Date().toLocaleString('th-TH'),
           staff: owner,
           ref,
-          oldVouchers: oldVoucherDetails,
+          oldVouchers: validatedVouchers,
           totalAmount: totalAmount.toFixed(2),
           newCode: String(newCode)
+        });
+
+        // เคลียร์ค่าหลังจากทำงานเสร็จ
+        document.getElementById('owner_combine_ref').value = '';
+        document.querySelectorAll('.owner-v-input').forEach((input, index) => {
+          if (index < 2) input.value = '';
+          else input.remove();
         });
 
       } catch (err) {
@@ -456,6 +501,7 @@
         });
 
         document.getElementById('owner_cancel_code').value = '';
+        document.getElementById('owner_cancel_reason').value = '';
       } catch (err) {
         alert("เกิดข้อผิดพลาด: " + err.message);
       } finally {
@@ -464,7 +510,6 @@
       }
     }
 
-    // ดึงข้อมูลประวัติผ่าน Edge Function (หมดปัญหาโหลดข้อมูลล้มเหลว)
     async function loadOwnerHistory() {
       const tbody = document.getElementById('owner-history-rows');
       tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400 font-bold">กำลังโหลดประวัติ...</td></tr>`;
@@ -513,7 +558,7 @@
       });
 
       if (item.action_type === 'OWNER_REISSUE') {
-        renderAndPrintOwnerSlip({
+        await renderAndPrintOwnerSlip({
           txId: item.transaction_id,
           dateStr: new Date(item.created_at).toLocaleString('th-TH'),
           owner: item.staff_name,
@@ -524,7 +569,7 @@
           reprintBy: repStaff
         });
       } else if (item.action_type === 'COMBINE') {
-        renderAndPrintCombineSlip({
+        await renderAndPrintCombineSlip({
           txId: item.transaction_id,
           dateStr: new Date(item.created_at).toLocaleString('th-TH'),
           staff: item.staff_name,
@@ -548,10 +593,11 @@
       }
     }
 
-    // พิมพ์สลิปความร้อน (80mm)
-    function renderAndPrintOwnerSlip(data) {
+    // พิมพ์สลิปความร้อน (80mm) ด้วย Local QR Base64
+    async function renderAndPrintOwnerSlip(data) {
       const p = document.getElementById('print-area');
       const formattedCode = data.newCode ? data.newCode.replace(/(\d{4})/g, '$1 ').trim() : '';
+      const qrDataUrl = await generateQrBase64(data.newCode);
 
       p.innerHTML = `
         <div class="thermal-doc">
@@ -572,17 +618,18 @@
             <div style="font-size:20px; font-weight:900; letter-spacing:2px; font-family:monospace; margin-bottom:6px;">
               ${formattedCode}
             </div>
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(data.newCode)}" 
-                 style="width:140px; height:140px; margin:auto; display:block;" 
-                 onload="window.print()" />
+            <img src="${qrDataUrl}" style="width:140px; height:140px; margin:auto; display:block;" />
           </div>
         </div>
       `;
+
+      setTimeout(() => { window.print(); }, 150);
     }
 
-    function renderAndPrintCombineSlip(data) {
+    async function renderAndPrintCombineSlip(data) {
       const p = document.getElementById('print-area');
       const formattedCode = data.newCode ? data.newCode.replace(/(\d{4})/g, '$1 ').trim() : '';
+      const qrDataUrl = await generateQrBase64(data.newCode);
 
       const oldList = data.oldVouchers.map((v, i) => `
         <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:bold;">
@@ -636,12 +683,12 @@
             <div style="font-size:20px; font-weight:900; letter-spacing:2px; font-family:monospace; margin:6px 0;">
               ${formattedCode}
             </div>
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(data.newCode)}" 
-                 style="width:140px; height:140px; margin:auto; display:block;" 
-                 onload="window.print()" />
+            <img src="${qrDataUrl}" style="width:140px; height:140px; margin:auto; display:block;" />
           </div>
         </div>
       `;
+
+      setTimeout(() => { window.print(); }, 150);
     }
 
     function renderAndPrintVoidSlip(data) {
@@ -662,7 +709,7 @@
           </div>
         </div>
       `;
-      setTimeout(() => { window.print(); }, 200);
+      setTimeout(() => { window.print(); }, 150);
     }
   </script>
 </body>
