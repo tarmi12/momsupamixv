@@ -76,7 +76,7 @@
         รวมยอดคูปอง
       </button>
       <button type="button" onclick="switchTab('cancel')" id="tab-cancel" class="tab-btn px-6 py-3 font-bold text-lg border-b-4 border-transparent text-slate-500 hover:text-slate-900 transition">
-        ยกเลิกเดี่ยว
+        ยกเลิกคูปอง
       </button>
       <button type="button" onclick="switchTab('history')" id="tab-history" class="tab-btn px-6 py-3 font-bold text-lg border-b-4 border-transparent text-slate-500 hover:text-slate-900 transition">
         ประวัติ & พิมพ์ซ้ำ
@@ -143,21 +143,26 @@
       </div>
     </div>
 
-    <!-- VIEW 3: ยกเลิกเดี่ยว -->
+    <!-- VIEW 3: ยกเลิกคูปอง (ปรับปรุง: รองรับหลายใบ) -->
     <div id="view-cancel" class="tab-content bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hidden">
       <div class="border-b border-slate-100 pb-4 mb-6">
-        <h2 class="text-xl font-black text-rose-600">ยกเลิกคูปองเดี่ยว (VOID)</h2>
-        <p class="text-sm text-slate-500 mt-1">ยกเลิกคูปองในระบบ Tiger API ทันที</p>
+        <h2 class="text-xl font-black text-rose-600">ยกเลิกคูปอง (VOID Batch)</h2>
+        <p class="text-sm text-slate-500 mt-1">ยกเลิกคูปองในระบบ Tiger API ได้ทีละใบหรือหลายใบพร้อมกัน</p>
       </div>
 
-      <div class="max-w-lg space-y-6">
+      <div class="max-w-xl space-y-6">
         <div>
-          <label class="block text-sm font-bold text-slate-700 mb-2">รหัสคูปองที่ต้องการยกเลิก *</label>
-          <input type="text" id="owner_cancel_code" oninput="cleanVoucherInput(this)" placeholder="เช่น 9900 2553 2012" class="w-full bg-slate-50 border-2 border-slate-200 p-4 rounded-xl text-xl font-mono font-bold uppercase tracking-wider outline-none focus:border-rose-500">
+          <label class="block text-sm font-bold text-slate-700 mb-2">รายการรหัสคูปอง 12 หลักที่ต้องการยกเลิก *</label>
+          <div id="owner-cancel-inputs" class="space-y-3">
+            <input type="text" oninput="cleanVoucherInput(this)" class="owner-cancel-v-input w-full bg-slate-50 border-2 border-slate-200 p-3.5 rounded-xl text-lg font-mono font-bold uppercase tracking-wider outline-none focus:border-rose-500" placeholder="คูปองใบที่ 1">
+          </div>
+          <button type="button" onclick="addOwnerCancelRow()" class="mt-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-4 py-2 rounded-lg text-sm transition">
+            + เพิ่มช่องกรอกคูปอง
+          </button>
         </div>
         <div>
           <label class="block text-sm font-bold text-slate-700 mb-2">เหตุผลการยกเลิก</label>
-          <input type="text" id="owner_cancel_reason" placeholder="เช่น ยกเลิกตามคำขอลูกค้า" class="w-full bg-slate-50 border-2 border-slate-200 p-3.5 rounded-xl text-base outline-none focus:border-rose-500">
+          <input type="text" id="owner_cancel_reason" placeholder="เช่น ยกเลิกตามคำขอลูกค้า / คีย์ผิด" class="w-full bg-slate-50 border-2 border-slate-200 p-3.5 rounded-xl text-base outline-none focus:border-rose-500">
         </div>
         <button type="button" onclick="processOwnerCancel()" id="btn-cancel" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-black py-4 rounded-xl text-lg shadow-md transition">
           ยืนยันการยกเลิกคูปอง
@@ -165,16 +170,18 @@
       </div>
     </div>
 
-    <!-- VIEW 4: ประวัติ & Reprint -->
+    <!-- VIEW 4: ประวัติ & Reprint (ปรับปรุง: Pagination หน้าละ 50 รายการ) -->
     <div id="view-history" class="tab-content bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hidden">
-      <div class="flex justify-between items-center border-b border-slate-100 pb-4 mb-6">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 pb-4 mb-6 gap-3">
         <div>
           <h2 class="text-xl font-black text-slate-900">ประวัติการทำรายการ</h2>
-          <p class="text-sm text-slate-500 mt-0.5">50 รายการล่าสุดจากระบบ Supabase</p>
+          <p class="text-sm text-slate-500 mt-0.5" id="history-total-label">แสดงหน้าละ 50 รายการจากระบบ Supabase</p>
         </div>
-        <button type="button" onclick="loadOwnerHistory()" class="bg-slate-100 hover:bg-slate-200 border border-slate-300 font-bold px-4 py-2 rounded-xl text-sm transition">
-          รีเฟรชตาราง
-        </button>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="loadOwnerHistory()" class="bg-slate-100 hover:bg-slate-200 border border-slate-300 font-bold px-4 py-2 rounded-xl text-sm transition">
+            รีเฟรชตาราง
+          </button>
+        </div>
       </div>
 
       <div class="overflow-x-auto">
@@ -194,6 +201,19 @@
           <tbody id="owner-history-rows" class="divide-y divide-slate-200 font-medium"></tbody>
         </table>
       </div>
+
+      <!-- ส่วนควบคุม Pagination -->
+      <div id="pagination-controls" class="flex flex-col sm:flex-row justify-between items-center mt-6 pt-4 border-t border-slate-200 gap-3">
+        <span class="text-sm text-slate-600 font-medium" id="page-indicator">หน้าที่ 1 / 1</span>
+        <div class="flex gap-2">
+          <button type="button" id="btn-prev-page" onclick="changePage(-1)" class="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 font-bold text-sm rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition">
+            ‹ ก่อนหน้า
+          </button>
+          <button type="button" id="btn-next-page" onclick="changePage(1)" class="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 font-bold text-sm rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition">
+            ถัดไป ›
+          </button>
+        </div>
+      </div>
     </div>
 
   </div>
@@ -204,6 +224,11 @@
   <script>
     const EDGE_FUNCTION_URL = "https://vwsidnehgijyinuxqzqy.supabase.co/functions/v1/tiger-api";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3c2lkbmVoZ2lqeWludXhxenF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1NjI4MjcsImV4cCI6MjEwNTEzODgyN30.NiTeJBRKXAj3uy_32FtH--MupCyTNG2YpVypIsleyF8";
+
+    // จัดการตัวแปร Pagination
+    let historyAllData = [];
+    let historyCurrentPage = 1;
+    const HISTORY_PAGE_SIZE = 50;
 
     function cleanVoucherInput(el) {
       const clean = el.value.replace(/[^0-9a-zA-Z]/g, '').slice(0, 12);
@@ -235,6 +260,16 @@
       input.type = "text";
       input.oninput = function() { cleanVoucherInput(this); };
       input.className = "owner-v-input w-full bg-slate-50 border-2 border-slate-200 p-3.5 rounded-xl text-lg font-mono font-bold uppercase tracking-wider outline-none focus:border-emerald-600";
+      input.placeholder = `คูปองใบที่ ${container.children.length + 1}`;
+      container.appendChild(input);
+    }
+
+    function addOwnerCancelRow() {
+      const container = document.getElementById('owner-cancel-inputs');
+      const input = document.createElement('input');
+      input.type = "text";
+      input.oninput = function() { cleanVoucherInput(this); };
+      input.className = "owner-cancel-v-input w-full bg-slate-50 border-2 border-slate-200 p-3.5 rounded-xl text-lg font-mono font-bold uppercase tracking-wider outline-none focus:border-rose-500";
       input.placeholder = `คูปองใบที่ ${container.children.length + 1}`;
       container.appendChild(input);
     }
@@ -466,42 +501,72 @@
       }
     }
 
+    // ยกเลิกคูปอง (ปรับปรุง: รองรับการยกเลิกหลายใบพร้อมกัน)
     async function processOwnerCancel() {
       const owner = document.getElementById('owner_name').value.trim() || 'Owner';
-      const code = document.getElementById('owner_cancel_code').value.trim().replace(/[^0-9a-zA-Z]/g, '').toUpperCase();
       const reason = document.getElementById('owner_cancel_reason').value.trim() || 'Owner VOID';
+      const inputs = Array.from(document.querySelectorAll('.owner-cancel-v-input'))
+                          .map(i => i.value.trim().replace(/[^0-9a-zA-Z]/g, '').toUpperCase())
+                          .filter(v => v.length >= 5);
 
-      if (!code || code.length < 5) return alert("กรุณาระบุรหัสคูปอง 12 หลัก");
-      if (!confirm(`ยืนยันการยกเลิกคูปอง ${code} หรือไม่?`)) return;
+      if (inputs.length === 0) return alert("กรุณาระบุรหัสคูปองที่ต้องการยกเลิกอย่างน้อย 1 ใบ");
+
+      const uniqueCodes = Array.from(new Set(inputs));
+      if (!confirm(`ยืนยันการยกเลิกคูปองจำนวน ${uniqueCodes.length} ใบ หรือไม่?`)) return;
 
       const btn = document.getElementById('btn-cancel');
       btn.disabled = true;
-      btn.innerText = "กำลังยกเลิก...";
+      btn.innerText = "กำลังเริ่มยกเลิก...";
+
+      const txId = `VOID-${Date.now()}`;
+      let successList = [];
+      let failList = [];
 
       try {
-        await callBackend("cancel", { voucher_num: code });
-        const txId = `VOID-${Date.now()}`;
+        for (let i = 0; i < uniqueCodes.length; i++) {
+          const code = uniqueCodes[i];
+          btn.innerText = `กำลังยกเลิกใบที่ ${i + 1}/${uniqueCodes.length} (${code})...`;
+          try {
+            await callBackend("cancel", { voucher_num: code });
+            successList.push(code);
+          } catch (err) {
+            failList.push({ code, err: err.message });
+          }
+        }
 
-        await callBackend("db_insert", {
-          transaction_id: txId,
-          action_type: 'CANCEL_SINGLE',
-          staff_name: owner,
-          total_amount: 0.00,
-          old_vouchers: [{ code, amount: 0 }],
-          ref_num: '-',
-          error_message: reason
+        if (successList.length > 0) {
+          const oldVouchersPayload = successList.map(c => ({ code: c, amount: 0 }));
+          await callBackend("db_insert", {
+            transaction_id: txId,
+            action_type: 'CANCEL_SINGLE',
+            staff_name: owner,
+            total_amount: 0.00,
+            old_vouchers: oldVouchersPayload,
+            ref_num: '-',
+            error_message: reason
+          });
+
+          renderAndPrintVoidSlip({
+            txId,
+            dateStr: new Date().toLocaleString('th-TH'),
+            staff: owner,
+            voucherNum: successList.join(', '),
+            voucherList: successList,
+            reason
+          });
+        }
+
+        if (failList.length > 0) {
+          alert(`ยกเลิกสำเร็จ ${successList.length} ใบ, ล้มเหลว ${failList.length} ใบ:\n` + failList.map(f => `${f.code}: ${f.err}`).join('\n'));
+        }
+
+        // รีเซ็ตฟอร์ม
+        document.querySelectorAll('.owner-cancel-v-input').forEach((input, index) => {
+          if (index === 0) input.value = '';
+          else input.remove();
         });
-
-        renderAndPrintVoidSlip({
-          txId,
-          dateStr: new Date().toLocaleString('th-TH'),
-          staff: owner,
-          voucherNum: code,
-          reason
-        });
-
-        document.getElementById('owner_cancel_code').value = '';
         document.getElementById('owner_cancel_reason').value = '';
+
       } catch (err) {
         alert("เกิดข้อผิดพลาด: " + err.message);
       } finally {
@@ -510,37 +575,72 @@
       }
     }
 
+    // ประวัติ & Pagination
     async function loadOwnerHistory() {
       const tbody = document.getElementById('owner-history-rows');
       tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400 font-bold">กำลังโหลดประวัติ...</td></tr>`;
 
       try {
         const data = await callBackend("db_select");
-        if (!data || data.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400">ยังไม่มีประวัติการทำรายการ</td></tr>`;
-          return;
-        }
-
-        tbody.innerHTML = data.map(item => `
-          <tr class="hover:bg-slate-50 border-b border-slate-200">
-            <td class="p-3.5">${new Date(item.created_at).toLocaleString('th-TH')}</td>
-            <td class="p-3.5 font-mono font-bold text-slate-900">${item.transaction_id}<br><span class="text-slate-400 text-xs font-normal">${item.ref_num}</span></td>
-            <td class="p-3.5">
-              <span class="px-2.5 py-1 rounded text-xs font-black ${item.action_type === 'OWNER_REISSUE' ? 'bg-purple-100 text-purple-800' : (item.action_type === 'COMBINE' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800')}">
-                ${item.action_type}
-              </span>
-            </td>
-            <td class="p-3.5">${item.staff_name}</td>
-            <td class="p-3.5 font-black text-slate-900">${parseFloat(item.total_amount).toFixed(2)}</td>
-            <td class="p-3.5 font-mono text-slate-400">${item.new_voucher_code ? '••••••••' + item.new_voucher_code.slice(-4) : '-'}</td>
-            <td class="p-3.5 text-center font-bold">${item.reprint_count}</td>
-            <td class="p-3.5 text-right">
-              <button type="button" onclick='reprintOwnerRecord(${JSON.stringify(item)})' class="bg-slate-800 hover:bg-black text-white px-3.5 py-1.5 rounded-lg text-xs font-bold transition">Reprint</button>
-            </td>
-          </tr>
-        `).join('');
+        historyAllData = Array.isArray(data) ? data : [];
+        historyCurrentPage = 1;
+        renderHistoryTable();
       } catch (err) {
         tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-rose-500 font-bold">โหลดข้อมูลล้มเหลว: ${err.message}</td></tr>`;
+      }
+    }
+
+    function renderHistoryTable() {
+      const tbody = document.getElementById('owner-history-rows');
+      const totalItems = historyAllData.length;
+
+      if (totalItems === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400">ยังไม่มีประวัติการทำรายการ</td></tr>`;
+        document.getElementById('page-indicator').innerText = 'หน้าที่ 0 / 0';
+        document.getElementById('btn-prev-page').disabled = true;
+        document.getElementById('btn-next-page').disabled = true;
+        return;
+      }
+
+      const totalPages = Math.ceil(totalItems / HISTORY_PAGE_SIZE);
+      if (historyCurrentPage > totalPages) historyCurrentPage = totalPages;
+      if (historyCurrentPage < 1) historyCurrentPage = 1;
+
+      const startIndex = (historyCurrentPage - 1) * HISTORY_PAGE_SIZE;
+      const endIndex = Math.min(startIndex + HISTORY_PAGE_SIZE, totalItems);
+      const pageData = historyAllData.slice(startIndex, endIndex);
+
+      document.getElementById('history-total-label').innerText = `ทั้งหมด ${totalItems} รายการ (แสดงรายการที่ ${startIndex + 1} - ${endIndex})`;
+      document.getElementById('page-indicator').innerText = `หน้าที่ ${historyCurrentPage} / ${totalPages} (หน้าละ ${HISTORY_PAGE_SIZE} รายการ)`;
+      document.getElementById('btn-prev-page').disabled = historyCurrentPage <= 1;
+      document.getElementById('btn-next-page').disabled = historyCurrentPage >= totalPages;
+
+      tbody.innerHTML = pageData.map(item => `
+        <tr class="hover:bg-slate-50 border-b border-slate-200">
+          <td class="p-3.5">${new Date(item.created_at).toLocaleString('th-TH')}</td>
+          <td class="p-3.5 font-mono font-bold text-slate-900">${item.transaction_id}<br><span class="text-slate-400 text-xs font-normal">${item.ref_num}</span></td>
+          <td class="p-3.5">
+            <span class="px-2.5 py-1 rounded text-xs font-black ${item.action_type === 'OWNER_REISSUE' ? 'bg-purple-100 text-purple-800' : (item.action_type === 'COMBINE' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800')}">
+              ${item.action_type}
+            </span>
+          </td>
+          <td class="p-3.5">${item.staff_name}</td>
+          <td class="p-3.5 font-black text-slate-900">${parseFloat(item.total_amount).toFixed(2)}</td>
+          <td class="p-3.5 font-mono text-slate-400">${item.new_voucher_code ? '••••••••' + item.new_voucher_code.slice(-4) : '-'}</td>
+          <td class="p-3.5 text-center font-bold">${item.reprint_count || 0}</td>
+          <td class="p-3.5 text-right">
+            <button type="button" onclick='reprintOwnerRecord(${JSON.stringify(item)})' class="bg-slate-800 hover:bg-black text-white px-3.5 py-1.5 rounded-lg text-xs font-bold transition">Reprint</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function changePage(direction) {
+      const totalPages = Math.ceil(historyAllData.length / HISTORY_PAGE_SIZE);
+      const newPage = historyCurrentPage + direction;
+      if (newPage >= 1 && newPage <= totalPages) {
+        historyCurrentPage = newPage;
+        renderHistoryTable();
       }
     }
 
@@ -581,11 +681,13 @@
           reprintBy: repStaff
         });
       } else if (item.action_type === 'CANCEL_SINGLE') {
+        const voucherCodes = Array.isArray(item.old_vouchers) ? item.old_vouchers.map(v => v.code) : [item.old_vouchers?.[0]?.code || '-'];
         renderAndPrintVoidSlip({
           txId: item.transaction_id,
           dateStr: new Date(item.created_at).toLocaleString('th-TH'),
           staff: item.staff_name,
-          voucherNum: item.old_vouchers?.[0]?.code || '-',
+          voucherNum: voucherCodes.join(', '),
+          voucherList: voucherCodes,
           reason: item.error_message,
           isReprint: true,
           reprintBy: repStaff
@@ -693,6 +795,10 @@
 
     function renderAndPrintVoidSlip(data) {
       const p = document.getElementById('print-area');
+      const listHtml = data.voucherList && data.voucherList.length > 1 
+        ? `<div style="margin-top:4px;">` + data.voucherList.map((c, i) => `<div>${i+1}. <span style="font-family:monospace; font-size:13px;">${c}</span></div>`).join('') + `</div>`
+        : `<span style="font-family:monospace; font-size:14px;">${data.voucherNum}</span>`;
+
       p.innerHTML = `
         <div class="thermal-doc" style="text-align:center;">
           ${data.isReprint ? `<div style="border:2px solid #000; padding:2px; margin-bottom:5px; font-weight:bold;">*** REPRINT SLIP (${data.reprintBy}) ***</div>` : ''}
@@ -701,7 +807,7 @@
             <div>วันที่-เวลา: ${data.dateStr}</div>
             <div>TX ID: ${data.txId}</div>
             <div>พนักงาน: ${data.staff}</div>
-            <div>รหัสคูปอง: <span style="font-family:monospace; font-size:14px;">${data.voucherNum}</span></div>
+            <div>รหัสคูปอง: ${listHtml}</div>
             <div>เหตุผล: ${data.reason}</div>
             <div style="margin-top:8px; border-top:1px dashed #000; padding-top:6px; text-align:center; font-size:15px; font-weight:900;">
               สถานะ: ยกเลิกในระบบสำเร็จ
