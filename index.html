@@ -97,9 +97,9 @@
         </div>
 
         <div>
-          <label class="block text-sm font-bold text-slate-700 mb-2">ยอดเงินใหม่ (บาท) *</label>
-          <input type="text" id="reissue_amount_input" placeholder="0.00" class="w-full bg-slate-50 border-2 border-slate-200 focus:border-emerald-600 focus:bg-white p-4 rounded-xl text-2xl font-black text-slate-900 transition outline-none">
-          <p class="text-xs text-slate-400 mt-1.5 font-medium">* ใส่ **1 ต่อท้ายยอดเงินแล้วกด Enter เพื่อสั่งงานด่วนได้</p>
+          <label class="block text-sm font-bold text-slate-700 mb-2">ยอดเงินใหม่ (บาท) * [ต้องต่อท้ายด้วย **1 เสมอ]</label>
+          <input type="text" id="reissue_amount_input" placeholder="เช่น 500**1" class="w-full bg-slate-50 border-2 border-slate-200 focus:border-emerald-600 focus:bg-white p-4 rounded-xl text-2xl font-black text-slate-900 transition outline-none">
+          <p class="text-xs text-rose-500 mt-1.5 font-bold">* ระบบความปลอดภัย: ต้องพิมพ์ **1 ต่อท้ายยอดเงินก่อนกดยืนยันทุกครั้ง</p>
         </div>
 
         <div>
@@ -143,7 +143,7 @@
       </div>
     </div>
 
-    <!-- VIEW 3: ยกเลิกคูปอง (ปรับปรุง: รองรับหลายใบ) -->
+    <!-- VIEW 3: ยกเลิกคูปอง -->
     <div id="view-cancel" class="tab-content bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hidden">
       <div class="border-b border-slate-100 pb-4 mb-6">
         <h2 class="text-xl font-black text-rose-600">ยกเลิกคูปอง (VOID Batch)</h2>
@@ -170,7 +170,7 @@
       </div>
     </div>
 
-    <!-- VIEW 4: ประวัติ & Reprint (ปรับปรุง: Pagination หน้าละ 50 รายการ) -->
+    <!-- VIEW 4: ประวัติ & Reprint (Pagination สมบูรณ์) -->
     <div id="view-history" class="tab-content bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hidden">
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 pb-4 mb-6 gap-3">
         <div>
@@ -203,13 +203,14 @@
       </div>
 
       <!-- ส่วนควบคุม Pagination -->
-      <div id="pagination-controls" class="flex flex-col sm:flex-row justify-between items-center mt-6 pt-4 border-t border-slate-200 gap-3">
+      <div id="pagination-controls" class="flex flex-col sm:flex-row justify-between items-center mt-6 pt-4 border-t border-slate-200 gap-4">
         <span class="text-sm text-slate-600 font-medium" id="page-indicator">หน้าที่ 1 / 1</span>
-        <div class="flex gap-2">
-          <button type="button" id="btn-prev-page" onclick="changePage(-1)" class="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 font-bold text-sm rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition">
+        <div class="flex items-center gap-2">
+          <button type="button" id="btn-prev-page" onclick="changePage(-1)" class="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 font-bold text-sm rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition">
             ‹ ก่อนหน้า
           </button>
-          <button type="button" id="btn-next-page" onclick="changePage(1)" class="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 font-bold text-sm rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition">
+          <div id="page-numbers" class="flex gap-1"></div>
+          <button type="button" id="btn-next-page" onclick="changePage(1)" class="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 font-bold text-sm rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition">
             ถัดไป ›
           </button>
         </div>
@@ -316,25 +317,29 @@
       return await response.json();
     }
 
-    // ดักจับ Trigger **1
+    // บังคับการใส่ **1 เพื่อยืนยันความปลอดภัย
     const amtInput = document.getElementById('reissue_amount_input');
     amtInput.addEventListener('keydown', function(e) {
       if (e.key === 'Enter') {
         e.preventDefault();
-        const raw = amtInput.value.trim();
-        if (raw.endsWith('**1')) {
-          const clean = raw.replace('**1', '');
-          amtInput.value = clean;
-          triggerOwnerReissue(clean);
-        } else {
-          submitOwnerReissueManual();
-        }
+        validateAndTriggerReissue();
       }
     });
 
     function submitOwnerReissueManual() {
-      const val = amtInput.value.trim().replace('**1', '');
-      triggerOwnerReissue(val);
+      validateAndTriggerReissue();
+    }
+
+    function validateAndTriggerReissue() {
+      const raw = amtInput.value.trim();
+      if (!raw.endsWith('**1')) {
+        alert("คำเตือนความปลอดภัย: คุณต้องใส่ **1 ต่อท้ายยอดเงินเสมอ (เช่น 500**1) จึงจะสามารถออกยอดใหม่ได้");
+        amtInput.focus();
+        return;
+      }
+      const clean = raw.slice(0, -3).trim();
+      amtInput.value = clean;
+      triggerOwnerReissue(clean);
     }
 
     async function triggerOwnerReissue(amountStr) {
@@ -393,7 +398,7 @@
       }
     }
 
-    // รวมยอดคูปอง (แยก 2 Phase: Validate ครบทุกใบก่อน -> ค่อยสั่ง Cancel)
+    // รวมยอดคูปอง
     async function processOwnerCombine() {
       const owner = document.getElementById('owner_name').value.trim() || 'Owner';
       const ref = document.getElementById('owner_combine_ref').value.trim() || `REF-${Date.now()}`;
@@ -405,7 +410,6 @@
         return alert("ต้องระบุรหัสคูปองเดิมตั้งแต่ 2 ใบขึ้นไป");
       }
 
-      // ป้องกันการกรอกรหัสคูปองซ้ำในรายการเดียวกัน
       const uniqueCodes = new Set(inputs);
       if (uniqueCodes.size !== inputs.length) {
         return alert("มีรหัสคูปองซ้ำกันในรายการ กรุณาตรวจสอบใหม่อีกครั้ง");
@@ -419,7 +423,6 @@
         let totalAmount = 0;
         let validatedVouchers = [];
 
-        // เฟส 1: ตรวจสอบสถานะและยอดเงินของทุกใบก่อน (ยังไม่ยกเลิกคูปอง)
         for (let i = 0; i < inputs.length; i++) {
           const code = inputs[i];
           btn.innerText = `กำลังตรวจสอบใบที่ ${i + 1}/${inputs.length}...`;
@@ -443,7 +446,6 @@
           validatedVouchers.push({ code: code, amount: amt });
         }
 
-        // เฟส 2: เมื่อทุกใบผ่านการเช็กยอดครบแล้ว จึงสั่ง Cancel ทีละใบ
         btn.innerText = "กำลังยกเลิกคูปองเดิม...";
         for (let i = 0; i < validatedVouchers.length; i++) {
           const v = validatedVouchers[i];
@@ -451,7 +453,6 @@
           await callBackend("cancel", { voucher_num: v.code });
         }
 
-        // เฟส 3: สร้างคูปองใหม่
         btn.innerText = "กำลังสร้างคูปองใหม่...";
         const txId = `TX-${Date.now()}`;
         const createRes = await callBackend("create", {
@@ -486,7 +487,6 @@
           newCode: String(newCode)
         });
 
-        // เคลียร์ค่าหลังจากทำงานเสร็จ
         document.getElementById('owner_combine_ref').value = '';
         document.querySelectorAll('.owner-v-input').forEach((input, index) => {
           if (index < 2) input.value = '';
@@ -501,7 +501,7 @@
       }
     }
 
-    // ยกเลิกคูปอง (ปรับปรุง: รองรับการยกเลิกหลายใบพร้อมกัน)
+    // ยกเลิกคูปองหลายใบพร้อมกัน
     async function processOwnerCancel() {
       const owner = document.getElementById('owner_name').value.trim() || 'Owner';
       const reason = document.getElementById('owner_cancel_reason').value.trim() || 'Owner VOID';
@@ -560,7 +560,6 @@
           alert(`ยกเลิกสำเร็จ ${successList.length} ใบ, ล้มเหลว ${failList.length} ใบ:\n` + failList.map(f => `${f.code}: ${f.err}`).join('\n'));
         }
 
-        // รีเซ็ตฟอร์ม
         document.querySelectorAll('.owner-cancel-v-input').forEach((input, index) => {
           if (index === 0) input.value = '';
           else input.remove();
@@ -575,13 +574,14 @@
       }
     }
 
-    // ประวัติ & Pagination
+    // ประวัติ & Pagination (ดึงข้อมูลทั้งหมดมาแบ่งหน้า)
     async function loadOwnerHistory() {
       const tbody = document.getElementById('owner-history-rows');
-      tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400 font-bold">กำลังโหลดประวัติ...</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400 font-bold">กำลังโหลดประวัติทั้งหมด...</td></tr>`;
 
       try {
-        const data = await callBackend("db_select");
+        // ส่ง limit สูง เพื่อไม่ให้ถูก Supabase จำกัดแค่ 50 แถวแรก
+        const data = await callBackend("db_select", { limit: 5000 });
         historyAllData = Array.isArray(data) ? data : [];
         historyCurrentPage = 1;
         renderHistoryTable();
@@ -597,6 +597,7 @@
       if (totalItems === 0) {
         tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400">ยังไม่มีประวัติการทำรายการ</td></tr>`;
         document.getElementById('page-indicator').innerText = 'หน้าที่ 0 / 0';
+        document.getElementById('page-numbers').innerHTML = '';
         document.getElementById('btn-prev-page').disabled = true;
         document.getElementById('btn-next-page').disabled = true;
         return;
@@ -610,10 +611,27 @@
       const endIndex = Math.min(startIndex + HISTORY_PAGE_SIZE, totalItems);
       const pageData = historyAllData.slice(startIndex, endIndex);
 
-      document.getElementById('history-total-label').innerText = `ทั้งหมด ${totalItems} รายการ (แสดงรายการที่ ${startIndex + 1} - ${endIndex})`;
+      document.getElementById('history-total-label').innerText = `ทั้งหมด ${totalItems} รายการ (กำลังแสดงรายการที่ ${startIndex + 1} - ${endIndex})`;
       document.getElementById('page-indicator').innerText = `หน้าที่ ${historyCurrentPage} / ${totalPages} (หน้าละ ${HISTORY_PAGE_SIZE} รายการ)`;
       document.getElementById('btn-prev-page').disabled = historyCurrentPage <= 1;
       document.getElementById('btn-next-page').disabled = historyCurrentPage >= totalPages;
+
+      // สร้างปุ่มเลขหน้า
+      const pageNumbersContainer = document.getElementById('page-numbers');
+      let pageButtonsHtml = '';
+      for (let p = 1; p <= totalPages; p++) {
+        if (p === 1 || p === totalPages || (p >= historyCurrentPage - 2 && p <= historyCurrentPage + 2)) {
+          const isActive = p === historyCurrentPage;
+          pageButtonsHtml += `
+            <button type="button" onclick="goToPage(${p})" class="px-3 py-1.5 rounded-lg text-sm font-bold transition ${isActive ? 'bg-slate-900 text-white' : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100'}">
+              ${p}
+            </button>
+          `;
+        } else if (p === historyCurrentPage - 3 || p === historyCurrentPage + 3) {
+          pageButtonsHtml += `<span class="px-2 py-1 text-slate-400 text-sm">...</span>`;
+        }
+      }
+      pageNumbersContainer.innerHTML = pageButtonsHtml;
 
       tbody.innerHTML = pageData.map(item => `
         <tr class="hover:bg-slate-50 border-b border-slate-200">
@@ -636,10 +654,13 @@
     }
 
     function changePage(direction) {
+      goToPage(historyCurrentPage + direction);
+    }
+
+    function goToPage(page) {
       const totalPages = Math.ceil(historyAllData.length / HISTORY_PAGE_SIZE);
-      const newPage = historyCurrentPage + direction;
-      if (newPage >= 1 && newPage <= totalPages) {
-        historyCurrentPage = newPage;
+      if (page >= 1 && page <= totalPages) {
+        historyCurrentPage = page;
         renderHistoryTable();
       }
     }
